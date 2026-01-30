@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:ingeo_app/features/auth/login_screen.dart';
+
+import 'dart:io';
+import 'package:ingeo_app/core/config/http_overrides.dart';
 import 'package:ingeo_app/features/splash/splash_screen.dart';
 import 'package:ingeo_app/utils/pending_file_handler.dart';
 import 'package:app_links/app_links.dart';
 import 'dart:async';
 
 void main() async {
+  HttpOverrides.global = BadCertificateHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }

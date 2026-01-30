@@ -109,9 +109,9 @@ class ImportLayersUtil {
     final effectiveFileName =
         fileName ?? path.split(Platform.pathSeparator).last;
 
-    List<Marker> allMarkers = [];
-    List<Polyline> allPolylines = [];
-    List<Polygon> allPolygons = [];
+    List<LabeledMarker> allMarkers = [];
+    List<LabeledPolyline> allPolylines = [];
+    List<LabeledPolygon> allPolygons = [];
     List<GeometryData> allGeometries = [];
     Map<String, dynamic> fileAttributes = {};
 
@@ -165,23 +165,8 @@ class ImportLayersUtil {
     return SavedDrawingLayer(
       id: 'external_layer_${DateTime.now().millisecondsSinceEpoch}',
       name: effectiveFileName,
-      points: allMarkers.map((marker) {
-        final labelWidget = (marker.child as Column).children.first;
-        final labelText = labelWidget is Text ? labelWidget.data ?? '' : '';
-
-        return LabeledMarker(
-          marker: marker,
-          label: labelText,
-          geometry: GeometryData(
-            name: labelText,
-            type: 'point',
-            coordinates: [marker.point],
-          ),
-        );
-      }).toList(),
-      lines: allPolylines
-          .map((polyline) => LabeledPolyline(polyline: polyline, label: ''))
-          .toList(),
+      points: allMarkers,
+      lines: allPolylines,
       polygons: allPolygons,
       rawGeometries: allGeometries,
       timestamp: DateTime.now(),

@@ -26,7 +26,7 @@ class AccessControlService {
     // Si no está autenticado, verificamos qué funciones requieren login
     if (!isAuthenticated.value) {
       switch (feature) {
-        case AppFeature.overlapAnalysis:
+        //case AppFeature.overlapAnalysis:
         case AppFeature.fieldNotebook:
         case AppFeature.manageDb:
         case AppFeature.workSchedule:

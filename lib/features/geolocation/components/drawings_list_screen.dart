@@ -312,16 +312,36 @@ class DrawingsListScreen extends StatelessWidget {
                           leading:
                               const Icon(Icons.location_on, color: Colors.red),
                           title: Text(labeledMarker.label),
-                          subtitle: layer.name.toLowerCase().contains('dibujo')
-                              ? null
-                              : Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(latText),
-                                    Text(lngText),
-                                    Text(utmText),
-                                  ],
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              if (labeledMarker.locality.isNotEmpty)
+                                _buildInfoRow('Localidad:', labeledMarker.locality),
+                              if (labeledMarker.manualCoordinates.isNotEmpty)
+                                _buildInfoRow('Coords:', labeledMarker.manualCoordinates),
+                              if (labeledMarker.observation.isNotEmpty)
+                                _buildInfoRow('Obs:', labeledMarker.observation),
+                              if (labeledMarker.attributes.isNotEmpty)
+                                _buildAttributesList(labeledMarker.attributes),
+                              if (!layer.name.toLowerCase().contains('dibujo')) ...[
+                                const Divider(height: 12),
+                                _buildInfoRow('Lat:', point.latitude.toStringAsFixed(6)),
+                                _buildInfoRow('Lng:', point.longitude.toStringAsFixed(6)),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    utmText,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[700],
+                                      fontFamily: 'Monospace',
+                                    ),
+                                  ),
                                 ),
+                              ]
+                            ],
+                          ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -357,7 +377,7 @@ class DrawingsListScreen extends StatelessWidget {
               children: layer.lines.map((line) {
                 final polyline = line.polyline;
                 final distance = _calculateDistance(polyline.points);
-                final photos = _getAttributesPhotos(layer, 'photos_line');
+                final photos = line.photos.map((p) => File(p)).toList();
 
                 return Column(
                   children: [
@@ -367,12 +387,31 @@ class DrawingsListScreen extends StatelessWidget {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Puntos: ${polyline.points.length}'),
-                          Text('Grosor: ${polyline.strokeWidth}'),
-                          Text('Distancia: ${_formatDistance(distance)}'),
+                          const SizedBox(height: 4),
+                          if (line.locality.isNotEmpty)
+                            _buildInfoRow('Localidad:', line.locality),
+                          if (line.manualCoordinates.isNotEmpty)
+                            _buildInfoRow('Coords:', line.manualCoordinates),
+                          if (line.observation.isNotEmpty)
+                            _buildInfoRow('Obs:', line.observation),
+                          if (line.attributes.isNotEmpty)
+                            _buildAttributesList(line.attributes),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 4,
+                            children: [
+                              _buildTag('Puntos: ${polyline.points.length}'),
+                              _buildTag('Grosor: ${polyline.strokeWidth}'),
+                              _buildTag('Distancia: ${_formatDistance(distance)}',
+                                  color: Colors.blue.shade100,
+                                  textColor: Colors.blue.shade900),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Text('Color: '),
+                              const Text('Color: ', style: TextStyle(fontSize: 12)),
                               Container(
                                 width: 20,
                                 height: 20,
@@ -407,8 +446,11 @@ class DrawingsListScreen extends StatelessWidget {
             ExpansionTile(
               title: Text('Polígonos (${layer.polygons.length})'),
               children: layer.polygons.map((polygon) {
-                final area = _calculatePolygonArea(polygon.points);
-                final photos = _getAttributesPhotos(layer, 'photos_polygon');
+                final area = _calculatePolygonArea(polygon.polygon.points);
+                final photos = polygon.photos.map((p) => File(p)).toList();
+                if (photos.isEmpty) {
+                   photos.addAll(_getAttributesPhotos(layer, 'photos_polygon'));
+                }
 
                 return Column(
                   children: [
@@ -418,20 +460,39 @@ class DrawingsListScreen extends StatelessWidget {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Label: ${polygon.label}'),
-                          Text('Vértices: ${polygon.points.length}'),
-                          Text('Grosor de borde: ${polygon.borderStrokeWidth}'),
-                          Text('Relleno: ${polygon.isFilled ? 'Sí' : 'No'}'),
-                          Text('Área: ${_formatArea(area)}'),
+                          const SizedBox(height: 4),
+                          _buildInfoRow('Label:', polygon.label),
+                          if (polygon.locality.isNotEmpty)
+                            _buildInfoRow('Localidad:', polygon.locality),
+                          if (polygon.manualCoordinates.isNotEmpty)
+                            _buildInfoRow('Coords:', polygon.manualCoordinates),
+                          if (polygon.observation.isNotEmpty)
+                            _buildInfoRow('Obs:', polygon.observation),
+                          if (polygon.attributes.isNotEmpty)
+                            _buildAttributesList(polygon.attributes),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 4,
+                            children: [
+                              _buildTag('Vértices: ${polygon.polygon.points.length}'),
+                              _buildTag(
+                                  'Relleno: ${polygon.polygon.isFilled ? 'Sí' : 'No'}'),
+                              _buildTag('Área: ${_formatArea(area)}',
+                                  color: Colors.green.shade100,
+                                  textColor: Colors.green.shade900),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Text('Color: '),
+                              const Text('Color: ', style: TextStyle(fontSize: 12)),
                               Container(
                                 width: 20,
                                 height: 20,
                                 margin: const EdgeInsets.only(left: 4),
                                 decoration: BoxDecoration(
-                                  color: polygon.color,
+                                  color: polygon.polygon.color,
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(color: Colors.black12),
                                 ),
@@ -440,14 +501,14 @@ class DrawingsListScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      onTap: () => _showPointsList(context, polygon.points),
+                      onTap: () => _showPointsList(context, polygon.polygon.points),
                       trailing: IconButton(
                         icon: const Icon(Icons.center_focus_strong,
                             color: Colors.indigo),
                         tooltip: 'Enfocar en el mapa',
                         onPressed: () {
                           Navigator.of(context).pop();
-                          onLayerFocus(polygon.points); // ✅ solo el polígono
+                          onLayerFocus(polygon.polygon.points); // ✅ solo el polígono
                         },
                       ),
                     ),
@@ -457,6 +518,71 @@ class DrawingsListScreen extends StatelessWidget {
               }).toList(),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAttributesList(Map<String, String> attributes) {
+    final filteredAttributes = attributes.entries.where((e) {
+      final key = e.key.toLowerCase();
+      // Filter out keys that are likely already mapped to main fields to avoid duplication
+      // but only if they were actually used (which we can't easily check here, so we show all valid extras)
+      // Actually user said "no mezcles", so let's show everything that isn't clearly one of the standard ones
+      // or maybe just show everything that ISN'T empty and ISN'T one of our internal mapping keys?
+      // For now, let's filter out keys that strongly match our internal mapping logic if we want to be strict,
+      // but the user wants to see the field names.
+      return !key.contains('localidad') &&
+          !key.contains('locality') &&
+          !key.contains('manual') &&
+          !key.contains('coord') && // matches coordinates too broadly?
+          !key.contains('obs') &&
+          !key.contains('note');
+    }).toList();
+
+    if (filteredAttributes.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 4),
+        ...filteredAttributes.map((e) => _buildInfoRow('${e.key}:', e.value)),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontSize: 13, color: Colors.black87),
+          children: [
+            TextSpan(
+              text: '$label ',
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: Colors.blueGrey),
+            ),
+            TextSpan(text: value),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTag(String text, {Color? color, Color? textColor}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color ?? Colors.grey[200],
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          color: textColor ?? Colors.grey[800],
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }

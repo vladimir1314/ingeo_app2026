@@ -48,6 +48,11 @@ Future<File> exportLayersByFolderToKMLorKMZ(
 
         buffer.writeln('''\n<Placemark>
   <name>${point.label}</name>
+  <ExtendedData>
+    <Data name="locality"><value>${point.locality}</value></Data>
+    <Data name="manualCoordinates"><value>${point.manualCoordinates}</value></Data>
+    <Data name="observation"><value>${point.observation}</value></Data>
+  </ExtendedData>
   <Point><coordinates>${point.marker.point.longitude},${point.marker.point.latitude},0</coordinates></Point>''');
 
         // Add photo references if any
@@ -112,6 +117,11 @@ Future<File> exportLayersByFolderToKMLorKMZ(
             .join(' ');
         buffer.writeln('''\n<Placemark>
   <name>${line.label}</name>
+  <ExtendedData>
+    <Data name="locality"><value>${line.locality}</value></Data>
+    <Data name="manualCoordinates"><value>${line.manualCoordinates}</value></Data>
+    <Data name="observation"><value>${line.observation}</value></Data>
+  </ExtendedData>
   <LineString>
     <coordinates>$coords</coordinates>
   </LineString>''');
@@ -130,11 +140,16 @@ Future<File> exportLayersByFolderToKMLorKMZ(
 
       for (final polygon in layer.polygons) {
         final coords = [
-          ...polygon.points,
-          polygon.points.first,
+          ...polygon.polygon.points,
+          polygon.polygon.points.first,
         ].map((p) => '${p.longitude},${p.latitude},0').join(' ');
         buffer.writeln('''\n<Placemark>
   <name>${polygon.label}</name>
+  <ExtendedData>
+    <Data name="locality"><value>${polygon.locality}</value></Data>
+    <Data name="manualCoordinates"><value>${polygon.manualCoordinates}</value></Data>
+    <Data name="observation"><value>${polygon.observation}</value></Data>
+  </ExtendedData>
   <Polygon>
     <outerBoundaryIs>
       <LinearRing>

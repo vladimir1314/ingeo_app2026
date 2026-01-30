@@ -3,27 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:ingeo_app/models/folder.dart';
+import 'package:ingeo_app/features/geolocation/models/label_input_result.dart';
 import 'package:ingeo_app/core/services/elevation_service.dart';
-
-class LabelInputResult {
-  final String label;
-  final String locality;
-  final String coords;
-  final String observation;
-  final String? selectedFolderId;
-  final String? selectedFolderPath;
-  final List<File> photos;
-
-  LabelInputResult({
-    required this.label,
-    required this.locality,
-    required this.coords,
-    required this.observation,
-    this.selectedFolderId,
-    this.selectedFolderPath,
-    required this.photos,
-  });
-}
 
 class LabelInputModal extends StatefulWidget {
   final String drawingType;

@@ -31,7 +31,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'components/search_bar.dart';
+import 'package:ingeo_app/features/geolocation/models/label_input_result.dart';
+import 'package:ingeo_app/features/geolocation/components/search_bar.dart';
 import 'package:utm/utm.dart';
 import 'dart:math' as math;
 
@@ -90,7 +91,7 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
   List<LatLng> linePoints = [];
   bool isDrawingPolygon = false;
   List<LatLng> polygonPoints = [];
-  List<Polygon> drawnPolygons = [];
+  List<LabeledPolygon> drawnPolygons = [];
   bool isDrawingRadius = false;
   LatLng? radiusCenter;
   List<Marker> centerMarkers = [];
@@ -141,7 +142,6 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
     loadWmsLayers();
     _getCurrentAccuracy();
     _updateElevation();
-    _loadFolders();
     loadFolders(); // Cargar las carpetas guardadas
     _loadMapConfig();
 
@@ -1189,7 +1189,7 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
     List<LatLng> allPoints = [];
 
     for (final poly in layer.polygons) {
-      allPoints.addAll(poly.points);
+      allPoints.addAll(poly.polygon.points);
     }
 
     for (final line in layer.lines) {
@@ -1571,6 +1571,13 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
               observacion: result.observation,
             );
 
+            List<String> persistedPaths = [];
+            List<File> persistedPhotos = [];
+            if (result.photos.isNotEmpty) {
+              persistedPaths = await _persistPhotos(result.photos);
+              persistedPhotos = persistedPaths.map((p) => File(p)).toList();
+            }
+
             if (drawingType == 'line') {
               setState(() {
                 drawnLines.add(
@@ -1580,7 +1587,11 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
                       strokeWidth: 3,
                       color: Colors.green,
                     ),
-                    label: fullDescription,
+                    label: result.label,
+                    locality: result.locality,
+                    manualCoordinates: result.coords,
+                    observation: result.observation,
+                    photos: persistedPaths,
                   ),
                 );
                 linePoints.clear();
@@ -1588,19 +1599,26 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
             } else if (drawingType == 'polygon') {
               setState(() {
                 drawnPolygons.add(
-                  Polygon(
-                    points: List.from(polygonPoints),
-                    color: Colors.blue.withOpacity(0.3),
-                    borderColor: Colors.blue,
-                    borderStrokeWidth: 3,
-                    label: fullDescription,
-                    labelStyle: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
+                  LabeledPolygon(
+                    polygon: Polygon(
+                      points: List.from(polygonPoints),
+                      color: Colors.blue.withOpacity(0.3),
+                      borderColor: Colors.blue,
+                      borderStrokeWidth: 3,
+                      label: result.label,
+                      labelStyle: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      labelPlacement: PolygonLabelPlacement.centroid,
+                      rotateLabel: false,
                     ),
-                    labelPlacement: PolygonLabelPlacement.centroid,
-                    rotateLabel: false,
+                    label: result.label,
+                    locality: result.locality,
+                    manualCoordinates: result.coords,
+                    observation: result.observation,
+                    photos: persistedPaths,
                   ),
                 );
                 polygonPoints.clear();
@@ -1612,15 +1630,15 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
                   drawnPoints.removeLast();
                 });
 
-                if (result.photos.isNotEmpty) {
-                  await _persistPhotos(result.photos);
-                }
-
                 setState(() {
                   drawnPoints.add(
                     LabeledMarker(
-                      label: fullDescription,
-                      photos: List.from(result.photos),
+                      label: result.label,
+                      locality: result.locality,
+                      manualCoordinates: result.coords,
+                      observation: result.observation,
+                      photos: persistedPhotos,
+                      photoPaths: persistedPaths,
                       marker: Marker(
                         point: lastPoint,
                         width: 100,
@@ -1681,10 +1699,10 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
 
             await _saveDrawingWithFolder(
               drawingType,
-              fullDescription,
+              result.label,
               result.selectedFolderId,
               result.selectedFolderPath,
-              result.photos,
+              [], // Photos are already persisted and attached to objects
             );
 
             if (mounted) {
@@ -1717,11 +1735,14 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
 
         // Crear el nuevo polígono
         drawnPolygons.add(
-          Polygon(
-            points: List.from(polygonPoints),
-            color: Colors.red.withOpacity(0.3),
-            borderColor: Colors.red,
-            borderStrokeWidth: 3,
+          LabeledPolygon(
+            polygon: Polygon(
+              points: List.from(polygonPoints),
+              color: Colors.red.withOpacity(0.3),
+              borderColor: Colors.red,
+              borderStrokeWidth: 3,
+            ),
+            label: '',
           ),
         );
         // Limpiar los puntos y desactivar el modo de dibujo
@@ -2110,15 +2131,15 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
                         PolygonLayer(
                           polygons: layer.polygons.map((p) {
                             return Polygon(
-                              points: p.points,
-                              color: p.color,
-                              borderColor: p.borderColor,
-                              borderStrokeWidth: p.borderStrokeWidth,
-                              isFilled: p.isFilled,
-                              label: p.label?.split('\n').first,
-                              labelStyle: p.labelStyle,
-                              labelPlacement: p.labelPlacement,
-                              rotateLabel: p.rotateLabel,
+                              points: p.polygon.points,
+                              color: p.polygon.color,
+                              borderColor: p.polygon.borderColor,
+                              borderStrokeWidth: p.polygon.borderStrokeWidth,
+                              isFilled: p.polygon.isFilled,
+                              label: p.label.split('\n').first,
+                              labelStyle: p.polygon.labelStyle,
+                              labelPlacement: p.polygon.labelPlacement,
+                              rotateLabel: p.polygon.rotateLabel,
                             );
                           }).toList(),
                         ),
@@ -2205,15 +2226,15 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
                 PolygonLayer(
                   polygons: drawnPolygons.map((p) {
                     return Polygon(
-                      points: p.points,
-                      color: p.color,
-                      borderColor: p.borderColor,
-                      borderStrokeWidth: p.borderStrokeWidth,
-                      isFilled: p.isFilled,
-                      label: p.label?.split('\n').first,
-                      labelStyle: p.labelStyle,
-                      labelPlacement: p.labelPlacement,
-                      rotateLabel: p.rotateLabel,
+                      points: p.polygon.points,
+                      color: p.polygon.color,
+                      borderColor: p.polygon.borderColor,
+                      borderStrokeWidth: p.polygon.borderStrokeWidth,
+                      isFilled: p.polygon.isFilled,
+                      label: p.label.split('\n').first,
+                      labelStyle: p.polygon.labelStyle,
+                      labelPlacement: p.polygon.labelPlacement,
+                      rotateLabel: p.polygon.rotateLabel,
                     );
                   }).toList(),
                 ),
@@ -2960,17 +2981,6 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
   }
 
   // Métodos para manejo de carpetas
-  Future<void> _loadFolders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final foldersString = prefs.getString('folders');
-    if (foldersString != null) {
-      final foldersJson = jsonDecode(foldersString) as List;
-      setState(() {
-        folders = foldersJson.map((json) => Folder.fromJson(json)).toList();
-      });
-    }
-  }
-
   Future<void> _saveFolders(List<Folder> foldersList) async {
     final prefs = await SharedPreferences.getInstance();
     final foldersJson = foldersList.map((folder) => folder.toJson()).toList();
@@ -2992,12 +3002,16 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
     }
   }
 
-  Folder _createFolder(String name) {
+  Future<Folder> _createFolder(String name) async {
     final newFolder = Folder(
       id: 'folder_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
       createdAt: DateTime.now(),
     );
+    
+    final updatedFolders = List<Folder>.from(folders)..add(newFolder);
+    await _saveFolders(updatedFolders);
+    
     return newFolder;
   }
 
@@ -3120,8 +3134,8 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
         importedLayer.lines.first.polyline.points.isNotEmpty) {
       mapController.move(importedLayer.lines.first.polyline.points.first, 12.0);
     } else if (importedLayer.polygons.isNotEmpty &&
-        importedLayer.polygons.first.points.isNotEmpty) {
-      mapController.move(importedLayer.polygons.first.points.first, 12.0);
+        importedLayer.polygons.first.polygon.points.isNotEmpty) {
+      mapController.move(importedLayer.polygons.first.polygon.points.first, 12.0);
     }
   }
 }

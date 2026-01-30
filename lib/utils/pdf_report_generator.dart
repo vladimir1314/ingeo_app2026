@@ -486,11 +486,11 @@ class PdfReportGenerator {
     // Polígonos
     for (var polygon in layer.polygons) {
       final parsed = _parseLabel(polygon.label);
-      final center = _getPolygonCentroid(polygon.points);
+      final center = _getPolygonCentroid(polygon.polygon.points);
       final centerUtm =
           UTM.fromLatLon(lat: center.latitude, lon: center.longitude);
 
-      final areaM2 = _calculatePolygonAreaMeters2(polygon.points);
+      final areaM2 = _calculatePolygonAreaMeters2(polygon.polygon.points);
       final areaKm2 = areaM2 / 1000000.0;
 
       rows.add(
@@ -673,11 +673,11 @@ class PdfReportGenerator {
 
       // Polígonos
       for (final polygon in layer.polygons) {
-        if (polygon.points.length < 3) continue;
+        if (polygon.polygon.points.length < 3) continue;
         
-        final center = _getPolygonCentroid(polygon.points);
-        final area = _calculatePolygonAreaMeters2(polygon.points);
-        final perimeter = _calculatePolygonPerimeter(polygon.points);
+        final center = _getPolygonCentroid(polygon.polygon.points);
+        final area = _calculatePolygonAreaMeters2(polygon.polygon.points);
+        final perimeter = _calculatePolygonPerimeter(polygon.polygon.points);
 
         sheetPolygons.appendRow([
           layer.name,

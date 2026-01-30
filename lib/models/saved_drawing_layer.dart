@@ -8,8 +8,21 @@ import 'geometry_data.dart';
 class LabeledPolyline {
   final Polyline polyline;
   final String label;
+  final String locality;
+  final String manualCoordinates;
+  final String observation;
+  final List<String> photos;
+  final Map<String, String> attributes;
 
-  LabeledPolyline({required this.polyline, required this.label});
+  LabeledPolyline({
+    required this.polyline,
+    required this.label,
+    this.locality = '',
+    this.manualCoordinates = '',
+    this.observation = '',
+    this.photos = const [],
+    this.attributes = const {},
+  });
 
   Map<String, dynamic> toJson() {
     return {
@@ -19,6 +32,11 @@ class LabeledPolyline {
       'color': polyline.color.value,
       'strokeWidth': polyline.strokeWidth,
       'label': label,
+      'locality': locality,
+      'manualCoordinates': manualCoordinates,
+      'observation': observation,
+      'photos': photos,
+      'attributes': attributes,
     };
   }
 
@@ -32,6 +50,68 @@ class LabeledPolyline {
         strokeWidth: json['strokeWidth'].toDouble(),
       ),
       label: json['label'] ?? '',
+      locality: json['locality'] ?? '',
+      manualCoordinates: json['manualCoordinates'] ?? '',
+      observation: json['observation'] ?? '',
+      photos: (json['photos'] as List?)?.cast<String>() ?? const [],
+      attributes: (json['attributes'] as Map<String, dynamic>?)?.map((k, v) => MapEntry(k, v.toString())) ?? {},
+    );
+  }
+}
+
+class LabeledPolygon {
+  final Polygon polygon;
+  final String label;
+  final String locality;
+  final String manualCoordinates;
+  final String observation;
+  final List<String> photos;
+  final Map<String, String> attributes;
+
+  LabeledPolygon({
+    required this.polygon,
+    required this.label,
+    this.locality = '',
+    this.manualCoordinates = '',
+    this.observation = '',
+    this.photos = const [],
+    this.attributes = const {},
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'points': polygon.points
+          .map((p) => {'lat': p.latitude, 'lng': p.longitude})
+          .toList(),
+      'color': polygon.color.value,
+      'borderStrokeWidth': polygon.borderStrokeWidth,
+      'isFilled': polygon.isFilled,
+      'label': label,
+      'locality': locality,
+      'manualCoordinates': manualCoordinates,
+      'observation': observation,
+      'photos': photos,
+      'attributes': attributes,
+    };
+  }
+
+  factory LabeledPolygon.fromJson(Map<String, dynamic> json) {
+    return LabeledPolygon(
+      polygon: Polygon(
+        points: (json['points'] as List)
+            .map((p) => LatLng(p['lat'] as double, p['lng'] as double))
+            .toList(),
+        color: Color(json['color'] as int),
+        borderStrokeWidth: (json['borderStrokeWidth'] as num?)?.toDouble() ?? 1.0,
+        isFilled: json['isFilled'] ?? false,
+        label: json['label'],
+      ),
+      label: json['label'] ?? '',
+      locality: json['locality'] ?? '',
+      manualCoordinates: json['manualCoordinates'] ?? '',
+      observation: json['observation'] ?? '',
+      photos: (json['photos'] as List?)?.cast<String>() ?? const [],
+      attributes: (json['attributes'] as Map<String, dynamic>?)?.map((k, v) => MapEntry(k, v.toString())) ?? {},
     );
   }
 }
@@ -40,9 +120,8 @@ class SavedDrawingLayer {
   final String id;
   final String name;
 
-  // final List<Polyline> lines;
   final List<LabeledPolyline> lines;
-  final List<Polygon> polygons;
+  final List<LabeledPolygon> polygons;
   // final List<Marker> points;
   final List<LabeledMarker> points;
   final DateTime timestamp;
@@ -71,17 +150,7 @@ class SavedDrawingLayer {
       'name': name,
       'timestamp': timestamp.toIso8601String(),
       'lines': lines.map((line) => line.toJson()).toList(),
-      'polygons': polygons
-          .map((polygon) => {
-                'points': polygon.points
-                    .map((p) => {'lat': p.latitude, 'lng': p.longitude})
-                    .toList(),
-                'color': polygon.color.value,
-                'borderStrokeWidth': polygon.borderStrokeWidth,
-                'isFilled': polygon.isFilled,
-                'label': polygon.label,
-              })
-          .toList(),
+      'polygons': polygons.map((polygon) => polygon.toJson()).toList(),
       'points': points.map((labeledMarker) => labeledMarker.toJson()).toList(),
       'rawGeometries': rawGeometries.map((g) => g.toJson()).toList(),
       'folderId': folderId,
@@ -99,31 +168,7 @@ class SavedDrawingLayer {
           .map((line) => LabeledPolyline.fromJson(line))
           .toList(),
       polygons: (json['polygons'] as List)
-          .map((polygon) => Polygon(
-                points: (polygon['points'] as List)
-                    .map((p) => LatLng(p['lat'] as double, p['lng'] as double))
-                    .toList(),
-                color: Color(polygon['color'] as int),
-                borderStrokeWidth: polygon['borderStrokeWidth'] as double,
-                isFilled: polygon['isFilled'] as bool,
-                label: polygon['label'],
-                labelStyle: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.black,
-                  fontWeight: FontWeight.w400,
-                  backgroundColor: Color.fromRGBO(
-                      255, 255, 255, 0.7), // fondo blanco translúcido
-                  shadows: [
-                    Shadow(
-                      color: Color.fromRGBO(0, 0, 0, 0.2), // sombra sutil
-                      blurRadius: 3,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
-                ),
-                labelPlacement: PolygonLabelPlacement.centroid,
-                rotateLabel: false,
-              ))
+          .map((polygon) => LabeledPolygon.fromJson(polygon))
           .toList(),
       points: (json['points'] as List)
           .map((p) => LabeledMarker.fromJson(p))

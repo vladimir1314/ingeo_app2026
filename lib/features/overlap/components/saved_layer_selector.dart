@@ -43,7 +43,10 @@ class SavedLayerSelector extends StatelessWidget {
   }
 
   Widget _buildLayerGroup(
-      BuildContext context, String title, List<_LayerItem> items) {
+    BuildContext context,
+    String title,
+    List<_LayerItem> items,
+  ) {
     if (items.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -77,10 +80,7 @@ class SavedLayerSelector extends StatelessWidget {
       ),
       child: ListTile(
         dense: true,
-        title: Text(
-          item.title,
-          style: const TextStyle(fontSize: 14),
-        ),
+        title: Text(item.title, style: const TextStyle(fontSize: 14)),
         leading: Checkbox(
           value: isActive,
           onChanged: (value) {
@@ -97,10 +97,12 @@ class SavedLayerSelector extends StatelessWidget {
               onPressed: () {
                 List<LatLng> focusPoints = [];
                 focusPoints.addAll(layer.points.map((p) => p.marker.point));
-                focusPoints
-                    .addAll(layer.lines.expand((line) => line.polyline.points));
-                focusPoints
-                    .addAll(layer.polygons.expand((polygon) => polygon.points));
+                focusPoints.addAll(
+                  layer.lines.expand((line) => line.polyline.points),
+                );
+                focusPoints.addAll(
+                  layer.polygons.expand((polygon) => polygon.polygon.points),
+                );
                 handleLayerFocus(focusPoints);
                 onLayerFocus(item.layerId);
               },
@@ -184,8 +186,9 @@ class SavedLayerSelector extends StatelessWidget {
                   layerStates.entries
                       .where((entry) => entry.key.startsWith('saved_layer_'))
                       .map((entry) {
-                        final layerIndex = savedLayers
-                            .indexWhere((layer) => layer.id == entry.key);
+                        final layerIndex = savedLayers.indexWhere(
+                          (layer) => layer.id == entry.key,
+                        );
                         if (layerIndex >= 0) {
                           return _LayerItem(
                             savedLayers[layerIndex].name,
@@ -202,7 +205,9 @@ class SavedLayerSelector extends StatelessWidget {
                 ]),
                 _buildLayerGroup(context, 'Comunidades', [
                   _LayerItem(
-                      'Comunidades Campesinas', 'sp_comunidades_campesinas'),
+                    'Comunidades Campesinas',
+                    'sp_comunidades_campesinas',
+                  ),
                   _LayerItem('Comunidades Nativas', 'sp_comunidades_nativas'),
                 ]),
                 _buildLayerGroup(context, 'División Política', [

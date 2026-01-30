@@ -142,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Tu asistente geológico personal',
+                          'Transforma tu móvil en una central de inteligencia territorial para validad proyectos en tiempo real',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,

@@ -44,14 +44,19 @@ class ActiveLayersPanel extends StatelessWidget {
   });
 
   Future<List<File>?> _generateIntersection(
-      BuildContext context, String fileName) async {
+    BuildContext context,
+    String fileName,
+  ) async {
     try {
       // Obtener capas de dibujo activas
       final activeDrawingLayers = layerStates.entries
-          .where((entry) =>
-              entry.value == true && entry.key.startsWith('saved_layer_'))
-          .map((entry) =>
-              savedLayers.firstWhere((layer) => layer.id == entry.key))
+          .where(
+            (entry) =>
+                entry.value == true && entry.key.startsWith('saved_layer_'),
+          )
+          .map(
+            (entry) => savedLayers.firstWhere((layer) => layer.id == entry.key),
+          )
           .toList();
 
       // Obtener capas temáticas activas (externas, SP o WMS)
@@ -70,12 +75,14 @@ class ActiveLayersPanel extends StatelessWidget {
           print('  - Detalles de polígonos:');
           for (int i = 0; i < layer.polygons.length; i++) {
             final polygon = layer.polygons[i];
-            print('    * Polígono $i: ${polygon.points.length} puntos');
-            if (polygon.points.isNotEmpty) {
+            print('    * Polígono $i: ${polygon.polygon.points.length} puntos');
+            if (polygon.polygon.points.isNotEmpty) {
               print(
-                  '      Primer punto: (${polygon.points.first.latitude}, ${polygon.points.first.longitude})');
+                '      Primer punto: (${polygon.polygon.points.first.latitude}, ${polygon.polygon.points.first.longitude})',
+              );
               print(
-                  '      Último punto: (${polygon.points.last.latitude}, ${polygon.points.last.longitude})');
+                '      Último punto: (${polygon.polygon.points.last.latitude}, ${polygon.polygon.points.last.longitude})',
+              );
             }
           }
         }
@@ -114,13 +121,14 @@ class ActiveLayersPanel extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-                'Las capas de dibujo no contienen geometrías válidas. Dibuje un polígono primero.'),
+              'Las capas de dibujo no contienen geometrías válidas. Dibuje un polígono primero.',
+            ),
           ),
         );
         return null;
       }
 
-// Procesar cada capa de dibujo con todas las capas temáticas
+      // Procesar cada capa de dibujo con todas las capas temáticas
       final queryCode = fileName;
       final Map<String, Map<String, dynamic>> allResults = {};
       for (var drawingLayer in activeDrawingLayers) {
@@ -128,11 +136,13 @@ class ActiveLayersPanel extends StatelessWidget {
 
         if (drawingLayer.polygons != null && drawingLayer.polygons.isNotEmpty) {
           print('La capa tiene ${drawingLayer.polygons.length} polígonos');
-          for (int polyIndex = 0;
-              polyIndex < drawingLayer.polygons.length;
-              polyIndex++) {
+          for (
+            int polyIndex = 0;
+            polyIndex < drawingLayer.polygons.length;
+            polyIndex++
+          ) {
             final polygon = drawingLayer.polygons[polyIndex];
-            final points = polygon.points;
+            final points = polygon.polygon.points;
             print('Procesando polígono $polyIndex con ${points.length} puntos');
 
             // Construir WKT
@@ -145,8 +155,9 @@ class ActiveLayersPanel extends StatelessWidget {
             }
             if (points.first.latitude != points.last.latitude ||
                 points.first.longitude != points.last.longitude) {
-              wktBuilder
-                  .write(',${points.first.longitude} ${points.first.latitude}');
+              wktBuilder.write(
+                ',${points.first.longitude} ${points.first.latitude}',
+              );
             }
             wktBuilder.write('))');
             final wktPolygon = wktBuilder.toString();
@@ -164,14 +175,16 @@ class ActiveLayersPanel extends StatelessWidget {
                 final features = results['features'] as List<dynamic>? ?? [];
                 if (features.isNotEmpty) {
                   print(
-                      'Resultados encontrados para $thematicLayerId: ${features.length}');
+                    'Resultados encontrados para $thematicLayerId: ${features.length}',
+                  );
                   if (!allResults.containsKey(thematicLayerId)) {
                     allResults[thematicLayerId] = {
                       'type': 'FeatureCollection',
                       'features': <dynamic>[],
                     };
                     print(
-                        'Inicializando FeatureCollection para $thematicLayerId');
+                      'Inicializando FeatureCollection para $thematicLayerId',
+                    );
                   }
                   final polyLabelRaw = (polygon.label?.toString() ?? '').trim();
                   final input1 = polyLabelRaw.isNotEmpty
@@ -181,16 +194,19 @@ class ActiveLayersPanel extends StatelessWidget {
                   final feats = features.map((f) {
                     final m = Map<String, dynamic>.from(f as Map);
                     final props = Map<String, dynamic>.from(
-                        (m['properties'] as Map?) ?? {});
+                      (m['properties'] as Map?) ?? {},
+                    );
                     props['__drawing_name'] = drawingLayer.name;
                     props['__input1'] = input1;
                     m['properties'] = props;
                     return m;
                   }).toList();
-                  (allResults[thematicLayerId]!['features'] as List)
-                      .addAll(feats);
+                  (allResults[thematicLayerId]!['features'] as List).addAll(
+                    feats,
+                  );
                   print(
-                      'Acumulando features. Total ahora en $thematicLayerId: ${(allResults[thematicLayerId]!['features'] as List).length}');
+                    'Acumulando features. Total ahora en $thematicLayerId: ${(allResults[thematicLayerId]!['features'] as List).length}',
+                  );
                 } else {
                   print('No se encontraron resultados para $thematicLayerId');
                 }
@@ -203,9 +219,11 @@ class ActiveLayersPanel extends StatelessWidget {
         if (drawingLayer.lines != null && drawingLayer.lines.isNotEmpty) {
           print('La capa tiene ${drawingLayer.lines.length} líneas');
 
-          for (int lineIndex = 0;
-              lineIndex < drawingLayer.lines.length;
-              lineIndex++) {
+          for (
+            int lineIndex = 0;
+            lineIndex < drawingLayer.lines.length;
+            lineIndex++
+          ) {
             final labeledLine = drawingLayer.lines[lineIndex];
             final pts = labeledLine.polyline.points;
 
@@ -215,7 +233,8 @@ class ActiveLayersPanel extends StatelessWidget {
             }
 
             print(
-                'Procesando línea $lineIndex: ${labeledLine.label}, ${pts.length} puntos');
+              'Procesando línea $lineIndex: ${labeledLine.label}, ${pts.length} puntos',
+            );
             final wktLine = _lineToWkt(pts);
             print('WKT Line: $wktLine');
 
@@ -241,21 +260,25 @@ class ActiveLayersPanel extends StatelessWidget {
                       'features': <dynamic>[],
                     };
                     print(
-                        'Inicializando FeatureCollection para $thematicLayerId');
+                      'Inicializando FeatureCollection para $thematicLayerId',
+                    );
                   }
 
                   // Agregar el feature a la lista de features
                   final m = Map<String, dynamic>.from(feature);
                   final props = Map<String, dynamic>.from(
-                      (m['properties'] as Map?) ?? {});
+                    (m['properties'] as Map?) ?? {},
+                  );
                   props['__drawing_name'] = drawingLayer.name;
                   m['properties'] = props;
                   (allResults[thematicLayerId]!['features'] as List).add(m);
                   print(
-                      'Feature agregado. Total features en $thematicLayerId: ${(allResults[thematicLayerId]!['features'] as List).length}');
+                    'Feature agregado. Total features en $thematicLayerId: ${(allResults[thematicLayerId]!['features'] as List).length}',
+                  );
                 } else {
                   print(
-                      '⚠️ No se encontró intersección para línea en $thematicLayerId');
+                    '⚠️ No se encontró intersección para línea en $thematicLayerId',
+                  );
                 }
               } catch (e) {
                 print('❌ Error al recortar línea en $thematicLayerId: $e');
@@ -267,14 +290,17 @@ class ActiveLayersPanel extends StatelessWidget {
         if (drawingLayer.points != null && drawingLayer.points.isNotEmpty) {
           print('La capa tiene ${drawingLayer.points.length} puntos');
 
-          for (int pointIndex = 0;
-              pointIndex < drawingLayer.points.length;
-              pointIndex++) {
+          for (
+            int pointIndex = 0;
+            pointIndex < drawingLayer.points.length;
+            pointIndex++
+          ) {
             final labeledPoint = drawingLayer.points[pointIndex];
             final pt = labeledPoint.marker.point;
 
             print(
-                'Procesando punto $pointIndex: ${labeledPoint.label}, (${pt.latitude}, ${pt.longitude})');
+              'Procesando punto $pointIndex: ${labeledPoint.label}, (${pt.latitude}, ${pt.longitude})',
+            );
             final wktPoint = 'POINT(${pt.longitude} ${pt.latitude})';
             print('WKT Point: $wktPoint');
 
@@ -300,21 +326,25 @@ class ActiveLayersPanel extends StatelessWidget {
                       'features': <dynamic>[],
                     };
                     print(
-                        'Inicializando FeatureCollection para $thematicLayerId');
+                      'Inicializando FeatureCollection para $thematicLayerId',
+                    );
                   }
 
                   // Agregar el feature a la lista de features
                   final m = Map<String, dynamic>.from(feature);
                   final props = Map<String, dynamic>.from(
-                      (m['properties'] as Map?) ?? {});
+                    (m['properties'] as Map?) ?? {},
+                  );
                   props['__drawing_name'] = drawingLayer.name;
                   m['properties'] = props;
                   (allResults[thematicLayerId]!['features'] as List).add(m);
                   print(
-                      'Feature agregado. Total features en $thematicLayerId: ${(allResults[thematicLayerId]!['features'] as List).length}');
+                    'Feature agregado. Total features en $thematicLayerId: ${(allResults[thematicLayerId]!['features'] as List).length}',
+                  );
                 } else {
                   print(
-                      '⚠️ No se encontró intersección para punto en $thematicLayerId');
+                    '⚠️ No se encontró intersección para punto en $thematicLayerId',
+                  );
                 }
               } catch (e) {
                 print('❌ Error al verificar punto en $thematicLayerId: $e');
@@ -343,7 +373,8 @@ class ActiveLayersPanel extends StatelessWidget {
       if (allResults.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('No se encontraron intersecciones geométricas')),
+            content: Text('No se encontraron intersecciones geométricas'),
+          ),
         );
         return null;
       }
@@ -365,15 +396,17 @@ class ActiveLayersPanel extends StatelessWidget {
       return [kmzFile, pdfFile];
     } catch (e) {
       print('Error en _generateIntersection: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       return null;
     }
   }
 
   SavedDrawingLayer _createLayerFromResults(
-      Map<String, Map<String, dynamic>> allResults, String fileName) {
+    Map<String, Map<String, dynamic>> allResults,
+    String fileName,
+  ) {
     final List<LabeledPolyline> lines = [];
     final List<Polygon> polygons = [];
     final List<LabeledMarker> points = [];
@@ -396,87 +429,114 @@ class ActiveLayersPanel extends StatelessWidget {
         if (geomType == 'Polygon') {
           final outerRing = (coords[0] as List<dynamic>).map((coord) {
             return LatLng(
-                (coord[1] is int ? (coord[1] as int).toDouble() : coord[1] as double),
-                (coord[0] is int ? (coord[0] as int).toDouble() : coord[0] as double));
+              (coord[1] is int
+                  ? (coord[1] as int).toDouble()
+                  : coord[1] as double),
+              (coord[0] is int
+                  ? (coord[0] as int).toDouble()
+                  : coord[0] as double),
+            );
           }).toList();
-          
-          polygons.add(Polygon(
-            points: outerRing,
-            color: baseColor.withOpacity(0.4),
-            borderColor: baseColor,
-            borderStrokeWidth: 2.0,
-            isFilled: true,
-            label: name,
-          ));
-        } else if (geomType == 'MultiPolygon') {
-          for (var polygon in coords) {
-            final outerRing = (polygon[0] as List<dynamic>).map((coord) {
-              return LatLng(
-                  (coord[1] is int ? (coord[1] as int).toDouble() : coord[1] as double),
-                  (coord[0] is int ? (coord[0] as int).toDouble() : coord[0] as double));
-            }).toList();
-            
-            polygons.add(Polygon(
+
+          polygons.add(
+            Polygon(
               points: outerRing,
               color: baseColor.withOpacity(0.4),
               borderColor: baseColor,
               borderStrokeWidth: 2.0,
               isFilled: true,
               label: name,
-            ));
+            ),
+          );
+        } else if (geomType == 'MultiPolygon') {
+          for (var polygon in coords) {
+            final outerRing = (polygon[0] as List<dynamic>).map((coord) {
+              return LatLng(
+                (coord[1] is int
+                    ? (coord[1] as int).toDouble()
+                    : coord[1] as double),
+                (coord[0] is int
+                    ? (coord[0] as int).toDouble()
+                    : coord[0] as double),
+              );
+            }).toList();
+
+            polygons.add(
+              Polygon(
+                points: outerRing,
+                color: baseColor.withOpacity(0.4),
+                borderColor: baseColor,
+                borderStrokeWidth: 2.0,
+                isFilled: true,
+                label: name,
+              ),
+            );
           }
         } else if (geomType == 'LineString') {
           final line = (coords as List<dynamic>).map((c) {
             return LatLng(
-                (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
-                (c[0] is int ? (c[0] as int).toDouble() : c[0] as double));
+              (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
+              (c[0] is int ? (c[0] as int).toDouble() : c[0] as double),
+            );
           }).toList();
-          
-          lines.add(LabeledPolyline(
-            polyline: Polyline(
-              points: line,
-              color: baseColor,
-              strokeWidth: 4.0,
-            ),
-            label: name,
-          ));
-        } else if (geomType == 'MultiLineString') {
-          for (var lineCoords in (coords as List<dynamic>)) {
-            final line = (lineCoords as List<dynamic>).map((c) {
-              return LatLng(
-                  (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
-                  (c[0] is int ? (c[0] as int).toDouble() : c[0] as double));
-            }).toList();
-             lines.add(LabeledPolyline(
+
+          lines.add(
+            LabeledPolyline(
               polyline: Polyline(
                 points: line,
                 color: baseColor,
                 strokeWidth: 4.0,
               ),
               label: name,
-            ));
+            ),
+          );
+        } else if (geomType == 'MultiLineString') {
+          for (var lineCoords in (coords as List<dynamic>)) {
+            final line = (lineCoords as List<dynamic>).map((c) {
+              return LatLng(
+                (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
+                (c[0] is int ? (c[0] as int).toDouble() : c[0] as double),
+              );
+            }).toList();
+            lines.add(
+              LabeledPolyline(
+                polyline: Polyline(
+                  points: line,
+                  color: baseColor,
+                  strokeWidth: 4.0,
+                ),
+                label: name,
+              ),
+            );
           }
         } else if (geomType == 'Point') {
           final lon = (coords as List<dynamic>)[0];
           final lat = (coords as List<dynamic>)[1];
           final pt = LatLng(
-              (lat is int ? lat.toDouble() : lat as double),
-              (lon is int ? lon.toDouble() : lon as double));
-              
-          points.add(LabeledMarker(
-            marker: Marker(
-              point: pt,
-              width: 40,
-              height: 40,
-              child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+            (lat is int ? lat.toDouble() : lat as double),
+            (lon is int ? lon.toDouble() : lon as double),
+          );
+
+          points.add(
+            LabeledMarker(
+              marker: Marker(
+                point: pt,
+                width: 40,
+                height: 40,
+                child: const Icon(
+                  Icons.location_on,
+                  color: Colors.red,
+                  size: 40,
+                ),
+              ),
+              label: name,
+              geometry: GeometryData(
+                type: 'Point',
+                name: name,
+                coordinates: [pt],
+              ),
             ),
-            label: name,
-            geometry: GeometryData(
-              type: 'Point',
-              name: name,
-              coordinates: [pt],
-            ),
-          ));
+          );
         }
       }
     });
@@ -486,7 +546,9 @@ class ActiveLayersPanel extends StatelessWidget {
       name: 'Intersección ${DateTime.now().toString().split('.')[0]}',
       points: points,
       lines: lines,
-      polygons: polygons,
+      polygons: polygons
+          .map((p) => LabeledPolygon(polygon: p, label: p.label ?? ''))
+          .toList(),
       rawGeometries: [], // No necesitamos rawGeometries por ahora
       timestamp: DateTime.now(),
       attributes: {'source': 'intersection', 'fileName': fileName},
@@ -503,7 +565,8 @@ class ActiveLayersPanel extends StatelessWidget {
     // Intento 1: WPS gs:Clip (el más adecuado para recortar)
     final wpsClipUrl = Uri.parse('http://84.247.176.139:8080/geoserver/wps');
 
-    final clipXml = '''<?xml version="1.0" encoding="UTF-8"?>
+    final clipXml =
+        '''<?xml version="1.0" encoding="UTF-8"?>
 <wps:Execute version="1.0.0" service="WPS"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns="http://www.opengis.net/wps/1.0.0"
@@ -556,7 +619,8 @@ class ActiveLayersPanel extends StatelessWidget {
 
       print('WPS Clip Status: ${clipResp.statusCode}');
       print(
-          'WPS Clip Response: ${clipResp.body.substring(0, math.min(500, clipResp.body.length))}');
+        'WPS Clip Response: ${clipResp.body.substring(0, math.min(500, clipResp.body.length))}',
+      );
 
       if (clipResp.statusCode == 200) {
         // Verificar si la respuesta es JSON
@@ -586,17 +650,18 @@ class ActiveLayersPanel extends StatelessWidget {
       // Usar el filtro CQL con WITHIN para obtener solo las geometrías dentro
       final cqlFilter = 'WITHIN($geomAttr, $wktPolygon)';
 
-      final wfsUrl = Uri.parse(
-        'http://84.247.176.139:8080/geoserver/ingeo/ows',
-      ).replace(queryParameters: {
-        'service': 'WFS',
-        'version': '2.0.0',
-        'request': 'GetFeature',
-        'typeName': 'ingeo:$layerName',
-        'outputFormat': 'application/json',
-        'srsName': 'EPSG:4326',
-        'CQL_FILTER': cqlFilter,
-      });
+      final wfsUrl = Uri.parse('http://84.247.176.139:8080/geoserver/ingeo/ows')
+          .replace(
+            queryParameters: {
+              'service': 'WFS',
+              'version': '2.0.0',
+              'request': 'GetFeature',
+              'typeName': 'ingeo:$layerName',
+              'outputFormat': 'application/json',
+              'srsName': 'EPSG:4326',
+              'CQL_FILTER': cqlFilter,
+            },
+          );
 
       final response = await http.get(
         wfsUrl,
@@ -626,7 +691,8 @@ class ActiveLayersPanel extends StatelessWidget {
     // Agregar advertencia en los resultados
     if (result['features'] != null && (result['features'] as List).isNotEmpty) {
       print(
-          '⚠️ ADVERTENCIA: Los resultados pueden incluir geometrías completas que solo tocan el polígono');
+        '⚠️ ADVERTENCIA: Los resultados pueden incluir geometrías completas que solo tocan el polígono',
+      );
     }
 
     return result;
@@ -655,9 +721,7 @@ class ActiveLayersPanel extends StatelessWidget {
 
     final response = await http.get(
       wfsUrl,
-      headers: {
-        'Authorization': 'Basic $encodedCredentials',
-      },
+      headers: {'Authorization': 'Basic $encodedCredentials'},
     );
 
     if (response.statusCode != 200) {
@@ -668,7 +732,8 @@ class ActiveLayersPanel extends StatelessWidget {
 
     final geoJson = json.decode(response.body) as Map<String, dynamic>;
     print(
-        'Fallback WFS INTERSECTS exitoso. Features: ${geoJson['features']?.length ?? 0}');
+      'Fallback WFS INTERSECTS exitoso. Features: ${geoJson['features']?.length ?? 0}',
+    );
     return geoJson;
   }
 
@@ -697,25 +762,27 @@ class ActiveLayersPanel extends StatelessWidget {
       final cql = 'INTERSECTS($geomAttr,SRID=4326;$wktLine)';
       print('CQL Filter: $cql');
 
-      final wfsUrl = Uri.parse(
-        'http://84.247.176.139:8080/geoserver/ingeo/ows',
-      ).replace(queryParameters: {
-        'service': 'WFS',
-        'version': '2.0.0',
-        'request': 'GetFeature',
-        'typeName': 'ingeo:$layerName',
-        'outputFormat': 'application/json',
-        'srsName': 'EPSG:4326',
-        'CQL_FILTER': cql,
-      });
+      final wfsUrl = Uri.parse('http://84.247.176.139:8080/geoserver/ingeo/ows')
+          .replace(
+            queryParameters: {
+              'service': 'WFS',
+              'version': '2.0.0',
+              'request': 'GetFeature',
+              'typeName': 'ingeo:$layerName',
+              'outputFormat': 'application/json',
+              'srsName': 'EPSG:4326',
+              'CQL_FILTER': cql,
+            },
+          );
 
       print('URL WFS: $wfsUrl');
 
       const credentials = 'geoserver_ingeo:IdeasG@ingeo';
       final encodedCredentials = base64Encode(utf8.encode(credentials));
-      final resp = await http.get(wfsUrl, headers: {
-        'Authorization': 'Basic $encodedCredentials',
-      });
+      final resp = await http.get(
+        wfsUrl,
+        headers: {'Authorization': 'Basic $encodedCredentials'},
+      );
 
       print('Respuesta HTTP: ${resp.statusCode}');
 
@@ -740,11 +807,13 @@ class ActiveLayersPanel extends StatelessWidget {
         return null;
       }
       print(
-          'MultiPolygon WKT: ${multipolygonWkt.substring(0, math.min(200, multipolygonWkt.length))}...');
+        'MultiPolygon WKT: ${multipolygonWkt.substring(0, math.min(200, multipolygonWkt.length))}...',
+      );
 
       print('🔧 Llamando a WPS JTS:intersection...');
       final wpsUrl = Uri.parse('http://84.247.176.139:8080/geoserver/wps');
-      final xml = '''<?xml version="1.0" encoding="UTF-8"?>
+      final xml =
+          '''<?xml version="1.0" encoding="UTF-8"?>
 <wps:Execute version="1.0.0" service="WPS"
  xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1">
   <ows:Identifier>JTS:intersection</ows:Identifier>
@@ -813,7 +882,7 @@ class ActiveLayersPanel extends StatelessWidget {
         'geometry': {
           'type': segments.length == 1 ? 'LineString' : 'MultiLineString',
           'coordinates': segments.length == 1 ? segments.first : segments,
-        }
+        },
       };
       print('✅ Feature creado con clip local');
       return feature;
@@ -843,26 +912,28 @@ class ActiveLayersPanel extends StatelessWidget {
       print('CQL Filter: $cql');
 
       // 3. CONSTRUIR URL DE CONSULTA WFS
-      final wfsUrl = Uri.parse(
-        'http://84.247.176.139:8080/geoserver/ingeo/ows',
-      ).replace(queryParameters: {
-        'service': 'WFS',
-        'version': '2.0.0',
-        'request': 'GetFeature',
-        'typeName': 'ingeo:$layerName',
-        'outputFormat': 'application/json',
-        'srsName': 'EPSG:4326',
-        'CQL_FILTER': cql,
-      });
+      final wfsUrl = Uri.parse('http://84.247.176.139:8080/geoserver/ingeo/ows')
+          .replace(
+            queryParameters: {
+              'service': 'WFS',
+              'version': '2.0.0',
+              'request': 'GetFeature',
+              'typeName': 'ingeo:$layerName',
+              'outputFormat': 'application/json',
+              'srsName': 'EPSG:4326',
+              'CQL_FILTER': cql,
+            },
+          );
 
       print('URL WFS: $wfsUrl');
 
       // 4. HACER PETICIÓN HTTP
       const credentials = 'geoserver_ingeo:IdeasG@ingeo';
       final encodedCredentials = base64Encode(utf8.encode(credentials));
-      final resp = await http.get(wfsUrl, headers: {
-        'Authorization': 'Basic $encodedCredentials',
-      });
+      final resp = await http.get(
+        wfsUrl,
+        headers: {'Authorization': 'Basic $encodedCredentials'},
+      );
 
       print('Respuesta HTTP: ${resp.statusCode}');
 
@@ -914,7 +985,7 @@ class ActiveLayersPanel extends StatelessWidget {
         'geometry': {
           'type': 'Point',
           'coordinates': [pt.longitude, pt.latitude],
-        }
+        },
       };
 
       print('✅ Feature de punto creado exitosamente');
@@ -967,10 +1038,7 @@ class ActiveLayersPanel extends StatelessWidget {
       return {
         'type': 'Feature',
         'properties': {'name': label},
-        'geometry': {
-          'type': 'MultiLineString',
-          'coordinates': lines,
-        }
+        'geometry': {'type': 'MultiLineString', 'coordinates': lines},
       };
     } else if (wkt.startsWith('LINESTRING')) {
       final inner = wkt.substring('LINESTRING'.length).trim();
@@ -982,10 +1050,7 @@ class ActiveLayersPanel extends StatelessWidget {
       return {
         'type': 'Feature',
         'properties': {'name': label},
-        'geometry': {
-          'type': 'LineString',
-          'coordinates': coords,
-        }
+        'geometry': {'type': 'LineString', 'coordinates': coords},
       };
     }
     return null;
@@ -999,19 +1064,23 @@ class ActiveLayersPanel extends StatelessWidget {
       final coords = geom['coordinates'];
       if (type == 'Polygon') {
         final ring = (coords[0] as List)
-            .map((c) => [
-                  (c[0] is int ? (c[0] as int).toDouble() : c[0] as double),
-                  (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
-                ])
+            .map(
+              (c) => [
+                (c[0] is int ? (c[0] as int).toDouble() : c[0] as double),
+                (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
+              ],
+            )
             .toList();
         rings.add(ring);
       } else if (type == 'MultiPolygon') {
         for (var poly in coords as List) {
           final ring = (poly[0] as List)
-              .map((c) => [
-                    (c[0] is int ? (c[0] as int).toDouble() : c[0] as double),
-                    (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
-                  ])
+              .map(
+                (c) => [
+                  (c[0] is int ? (c[0] as int).toDouble() : c[0] as double),
+                  (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
+                ],
+              )
               .toList();
           rings.add(ring);
         }
@@ -1021,7 +1090,9 @@ class ActiveLayersPanel extends StatelessWidget {
   }
 
   List<List<List<double>>> _clipLineByRings(
-      List<LatLng> pts, List<List<List<double>>> rings) {
+    List<LatLng> pts,
+    List<List<List<double>>> rings,
+  ) {
     final segments = <List<List<double>>>[];
     for (int i = 0; i < pts.length - 1; i++) {
       final a = pts[i];
@@ -1036,7 +1107,10 @@ class ActiveLayersPanel extends StatelessWidget {
   }
 
   List<List<List<double>>> _clipSegmentByRing(
-      LatLng a, LatLng b, List<List<double>> ring) {
+    LatLng a,
+    LatLng b,
+    List<List<double>> ring,
+  ) {
     final inters = <Map<String, dynamic>>[];
     for (int i = 0; i < ring.length - 1; i++) {
       final p = LatLng(ring[i][1], ring[i][0]);
@@ -1071,7 +1145,11 @@ class ActiveLayersPanel extends StatelessWidget {
   }
 
   Map<String, dynamic>? _segmentIntersection(
-      LatLng a, LatLng b, LatLng c, LatLng d) {
+    LatLng a,
+    LatLng b,
+    LatLng c,
+    LatLng d,
+  ) {
     final x1 = a.longitude, y1 = a.latitude;
     final x2 = b.longitude, y2 = b.latitude;
     final x3 = c.longitude, y3 = c.latitude;
@@ -1091,7 +1169,8 @@ class ActiveLayersPanel extends StatelessWidget {
     for (int i = 0, j = ring.length - 1; i < ring.length; j = i++) {
       final xi = ring[i][0], yi = ring[i][1];
       final xj = ring[j][0], yj = ring[j][1];
-      final intersect = ((yi > p.latitude) != (yj > p.latitude)) &&
+      final intersect =
+          ((yi > p.latitude) != (yj > p.latitude)) &&
           (p.longitude <
               (xj - xi) * (p.latitude - yi) / (yj - yi + 1e-12) + xi);
       if (intersect) inside = !inside;
@@ -1101,20 +1180,21 @@ class ActiveLayersPanel extends StatelessWidget {
 
   Future<String?> _getGeometryAttributeName(String layerName) async {
     try {
-      final url = Uri.parse(
-        'http://84.247.176.139:8080/geoserver/ingeo/ows',
-      ).replace(
-        queryParameters: {
-          'service': 'WFS',
-          'version': '1.0.0',
-          'request': 'DescribeFeatureType',
-          'typeName': 'ingeo:$layerName',
-        },
-      );
+      final url = Uri.parse('http://84.247.176.139:8080/geoserver/ingeo/ows')
+          .replace(
+            queryParameters: {
+              'service': 'WFS',
+              'version': '1.0.0',
+              'request': 'DescribeFeatureType',
+              'typeName': 'ingeo:$layerName',
+            },
+          );
       const credentials = 'geoserver_ingeo:IdeasG@ingeo';
       final encodedCredentials = base64Encode(utf8.encode(credentials));
-      final resp = await http
-          .get(url, headers: {'Authorization': 'Basic $encodedCredentials'});
+      final resp = await http.get(
+        url,
+        headers: {'Authorization': 'Basic $encodedCredentials'},
+      );
       if (resp.statusCode != 200) return null;
       final body = resp.body;
       final match = RegExp('name="(\\w+)"\\s+type="gml:').firstMatch(body);
@@ -1128,16 +1208,15 @@ class ActiveLayersPanel extends StatelessWidget {
   // Detecta el tipo de geometría de una capa vía DescribeFeatureType (WFS)
   Future<String?> _getLayerGeometryType(String layerName) async {
     try {
-      final url = Uri.parse(
-        'http://84.247.176.139:8080/geoserver/ingeo/ows',
-      ).replace(
-        queryParameters: {
-          'service': 'WFS',
-          'version': '1.0.0',
-          'request': 'DescribeFeatureType',
-          'typeName': 'ingeo:$layerName',
-        },
-      );
+      final url = Uri.parse('http://84.247.176.139:8080/geoserver/ingeo/ows')
+          .replace(
+            queryParameters: {
+              'service': 'WFS',
+              'version': '1.0.0',
+              'request': 'DescribeFeatureType',
+              'typeName': 'ingeo:$layerName',
+            },
+          );
 
       const credentials = 'geoserver_ingeo:IdeasG@ingeo';
       final encodedCredentials = base64Encode(utf8.encode(credentials));
@@ -1153,9 +1232,11 @@ class ActiveLayersPanel extends StatelessWidget {
       final body = resp.body;
       if (body.contains('gml:PointPropertyType')) return 'Point';
       if (body.contains('gml:PolygonPropertyType') ||
-          body.contains('gml:MultiPolygonPropertyType')) return 'Polygon';
+          body.contains('gml:MultiPolygonPropertyType'))
+        return 'Polygon';
       if (body.contains('gml:LineStringPropertyType') ||
-          body.contains('gml:MultiLineStringPropertyType')) return 'LineString';
+          body.contains('gml:MultiLineStringPropertyType'))
+        return 'LineString';
       return null;
     } catch (e) {
       print('Error detectando geometría de $layerName: $e');
@@ -1164,7 +1245,9 @@ class ActiveLayersPanel extends StatelessWidget {
   }
 
   Future<File> exportMultipleGeoJsonToKmz(
-      Map<String, Map<String, dynamic>> geoJsonResults, String fileName) async {
+    Map<String, Map<String, dynamic>> geoJsonResults,
+    String fileName,
+  ) async {
     final tempDir = await getTemporaryDirectory();
     final archive = Archive();
 
@@ -1191,10 +1274,16 @@ class ActiveLayersPanel extends StatelessWidget {
     // doc.kml debe existir como KML raíz para que los visores carguen el consolidado
     final consolidatedKml = _createConsolidatedKml(filtered, fileName);
     final consolidatedKmlData = utf8.encode(consolidatedKml);
-    archive.addFile(ArchiveFile(
-        'doc.kml', consolidatedKmlData.length, consolidatedKmlData));
-    archive.addFile(ArchiveFile('CONSOLIDADO_$fileName.kml',
-        consolidatedKmlData.length, consolidatedKmlData));
+    archive.addFile(
+      ArchiveFile('doc.kml', consolidatedKmlData.length, consolidatedKmlData),
+    );
+    archive.addFile(
+      ArchiveFile(
+        'CONSOLIDADO_$fileName.kml',
+        consolidatedKmlData.length,
+        consolidatedKmlData,
+      ),
+    );
 
     // KMLs individuales por capa
     for (final entry in filtered.entries) {
@@ -1203,8 +1292,13 @@ class ActiveLayersPanel extends StatelessWidget {
       final kmlContent = _geoJsonToKml(geoJson, layerName);
       if (kmlContent.isNotEmpty) {
         final kmlData = utf8.encode(kmlContent);
-        archive.addFile(ArchiveFile(
-            '${_sanitizeFileName(layerName)}.kml', kmlData.length, kmlData));
+        archive.addFile(
+          ArchiveFile(
+            '${_sanitizeFileName(layerName)}.kml',
+            kmlData.length,
+            kmlData,
+          ),
+        );
       }
     }
 
@@ -1222,7 +1316,9 @@ class ActiveLayersPanel extends StatelessWidget {
   }
 
   String _createConsolidatedKml(
-      Map<String, Map<String, dynamic>> geoJsonResults, String fileName) {
+    Map<String, Map<String, dynamic>> geoJsonResults,
+    String fileName,
+  ) {
     final allPlacemarks = geoJsonResults.entries
         .map((entry) {
           final layerName = entry.key;
@@ -1231,7 +1327,9 @@ class ActiveLayersPanel extends StatelessWidget {
           final displayName = layerName
               .replaceAll('sp_anp_nacionales_definidas', 'ANP Nacionales')
               .replaceAll(
-                  'sp_zonas_amortiguamiento', 'Zonas de Amortiguamiento')
+                'sp_zonas_amortiguamiento',
+                'Zonas de Amortiguamiento',
+              )
               .replaceAll('sp_', '')
               .replaceAll('_', ' ');
 
@@ -1243,11 +1341,13 @@ class ActiveLayersPanel extends StatelessWidget {
                 final coords = geometry['coordinates'];
 
                 String generateCoordinates(List<dynamic> ring) {
-                  return ring.map((c) {
-                    final lon = (c as List<dynamic>)[0];
-                    final lat = c[1];
-                    return '$lon,$lat,0';
-                  }).join(' ');
+                  return ring
+                      .map((c) {
+                        final lon = (c as List<dynamic>)[0];
+                        final lat = c[1];
+                        return '$lon,$lat,0';
+                      })
+                      .join(' ');
                 }
 
                 if (geomType == 'MultiPolygon') {
@@ -1261,8 +1361,9 @@ class ActiveLayersPanel extends StatelessWidget {
                           if (closedRing.first != closedRing.last) {
                             closedRing.add(closedRing.first);
                           }
-                          final coordinatesStr =
-                              generateCoordinates(closedRing);
+                          final coordinatesStr = generateCoordinates(
+                            closedRing,
+                          );
                           return '''
               <Polygon>
                 <outerBoundaryIs>
@@ -1354,12 +1455,14 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
               </Placemark>
             ''';
                 } else if (geomType == 'MultiLineString') {
-                  final lines = (coords as List<dynamic>).map((line) {
-                    final lc = (line as List<dynamic>)
-                        .map((c) => '${(c[0])},${(c[1])},0')
-                        .join(' ');
-                    return '<LineString><coordinates>$lc</coordinates></LineString>';
-                  }).join('\n');
+                  final lines = (coords as List<dynamic>)
+                      .map((line) {
+                        final lc = (line as List<dynamic>)
+                            .map((c) => '${(c[0])},${(c[1])},0')
+                            .join(' ');
+                        return '<LineString><coordinates>$lc</coordinates></LineString>';
+                      })
+                      .join('\n');
                   return '''
               <Placemark>
                 <name>🔹 ${_escapeXml(properties['name']?.toString() ?? 'Segmentos')} - $displayName</name>
@@ -1424,7 +1527,8 @@ ${geoJsonResults.keys.map((k) => '• $k').join('\n')}</description>
   }
 
   String _createReadmeContent(
-      Map<String, Map<String, dynamic>> geoJsonResults) {
+    Map<String, Map<String, dynamic>> geoJsonResults,
+  ) {
     final buffer = StringBuffer();
     buffer.writeln('INTERSECCIONES GEOMÉTRICAS - INFORMACIÓN DEL ARCHIVO');
     buffer.writeln('====================================================');
@@ -1436,16 +1540,19 @@ ${geoJsonResults.keys.map((k) => '• $k').join('\n')}</description>
     geoJsonResults.forEach((layerName, geoJson) {
       final features = geoJson['features'] as List<dynamic>;
       buffer.writeln(
-          '• $layerName: ${features.length} características encontradas');
+        '• $layerName: ${features.length} características encontradas',
+      );
     });
     buffer.writeln('');
     buffer.writeln('CONTENIDO DEL KMZ:');
     buffer.writeln('------------------');
     buffer.writeln(
-        '- CONSOLIDADO_[nombre].kml: Todas las intersecciones en un archivo');
+      '- CONSOLIDADO_[nombre].kml: Todas las intersecciones en un archivo',
+    );
     geoJsonResults.forEach((layerName, _) {
       buffer.writeln(
-          '- ${_sanitizeFileName(layerName)}.kml: Intersecciones individuales por capa');
+        '- ${_sanitizeFileName(layerName)}.kml: Intersecciones individuales por capa',
+      );
     });
     buffer.writeln('- README.txt: Este archivo de información');
     return buffer.toString();
@@ -1487,11 +1594,13 @@ ${geoJsonResults.keys.map((k) => '• $k').join('\n')}</description>
             final coords = geometry['coordinates'];
 
             String generateCoordinates(List<dynamic> ring) {
-              return ring.map((c) {
-                final lon = (c as List<dynamic>)[0];
-                final lat = c[1];
-                return '$lon,$lat,0';
-              }).join(' ');
+              return ring
+                  .map((c) {
+                    final lon = (c as List<dynamic>)[0];
+                    final lat = c[1];
+                    return '$lon,$lat,0';
+                  })
+                  .join(' ');
             }
 
             if (geomType == 'MultiPolygon') {
@@ -1597,12 +1706,14 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
               </Placemark>
             ''';
             } else if (geomType == 'MultiLineString') {
-              final lines = (coords as List<dynamic>).map((line) {
-                final lc = (line as List<dynamic>)
-                    .map((c) => '${(c[0])},${(c[1])},0')
-                    .join(' ');
-                return '<LineString><coordinates>$lc</coordinates></LineString>';
-              }).join('\n');
+              final lines = (coords as List<dynamic>)
+                  .map((line) {
+                    final lc = (line as List<dynamic>)
+                        .map((c) => '${(c[0])},${(c[1])},0')
+                        .join(' ');
+                    return '<LineString><coordinates>$lc</coordinates></LineString>';
+                  })
+                  .join('\n');
               return '''
               <Placemark>
                 <name>${_escapeXml(properties['name']?.toString() ?? 'Segmentos')}</name>
@@ -1670,15 +1781,18 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
     final List<String> info = [];
     if (layer.points.isNotEmpty) {
       info.add(
-          '${layer.points.length} punto${layer.points.length != 1 ? 's' : ''}');
+        '${layer.points.length} punto${layer.points.length != 1 ? 's' : ''}',
+      );
     }
     if (layer.lines.isNotEmpty) {
       info.add(
-          '${layer.lines.length} línea${layer.lines.length != 1 ? 's' : ''}');
+        '${layer.lines.length} línea${layer.lines.length != 1 ? 's' : ''}',
+      );
     }
     if (layer.polygons.isNotEmpty) {
       info.add(
-          '${layer.polygons.length} polígono${layer.polygons.length != 1 ? 's' : ''}');
+        '${layer.polygons.length} polígono${layer.polygons.length != 1 ? 's' : ''}',
+      );
     }
     return info.isEmpty ? 'Sin elementos' : info.join(', ');
   }
@@ -1708,11 +1822,17 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                 child: Row(
                   children: [
                     IconButton(
-                        icon: const Icon(Icons.close), onPressed: onClose),
+                      icon: const Icon(Icons.close),
+                      onPressed: onClose,
+                    ),
                     const SizedBox(width: 8),
-                    const Text('Capas Activas',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Capas Activas',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1731,36 +1851,51 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(12),
-                          border:
-                              Border.all(color: Colors.blue.shade200, width: 1),
+                          border: Border.all(
+                            color: Colors.blue.shade200,
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.layers,
-                                color: Colors.blue.shade700, size: 20),
+                            Icon(
+                              Icons.layers,
+                              color: Colors.blue.shade700,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
-                            Text('Capas Activas',
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue.shade700)),
+                            Text(
+                              'Capas Activas',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
                             const Spacer(),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                  color: Colors.blue.shade700,
-                                  borderRadius: BorderRadius.circular(12)),
+                                color: Colors.blue.shade700,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               child: Text(
-                                  '${layerStates.values.where((v) => v == true).length}',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold)),
+                                '${layerStates.values.where((v) => v == true).length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -1778,9 +1913,10 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2))
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
                             ],
                           ),
                           child: Column(
@@ -1791,32 +1927,44 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade50,
                                   borderRadius: const BorderRadius.only(
-                                      topLeft: Radius.circular(12),
-                                      topRight: Radius.circular(12)),
+                                    topLeft: Radius.circular(12),
+                                    topRight: Radius.circular(12),
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.folder_outlined,
-                                        color: Colors.grey.shade600, size: 18),
+                                    Icon(
+                                      Icons.folder_outlined,
+                                      color: Colors.grey.shade600,
+                                      size: 18,
+                                    ),
                                     const SizedBox(width: 8),
-                                    Text(group.title,
-                                        style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.grey.shade700)),
+                                    Text(
+                                      group.title,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
                                     const Spacer(),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 2),
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
-                                          color: Colors.green.shade100,
-                                          borderRadius:
-                                              BorderRadius.circular(8)),
-                                      child: Text('${activeItems.length}',
-                                          style: TextStyle(
-                                              color: Colors.green.shade700,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold)),
+                                        color: Colors.green.shade100,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '${activeItems.length}',
+                                        style: TextStyle(
+                                          color: Colors.green.shade700,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -1830,26 +1978,37 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                                     border: !isLast
                                         ? Border(
                                             bottom: BorderSide(
-                                                color: Colors.grey.shade200,
-                                                width: 0.5))
+                                              color: Colors.grey.shade200,
+                                              width: 0.5,
+                                            ),
+                                          )
                                         : null,
                                   ),
                                   child: ListTile(
                                     contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 4),
+                                      horizontal: 16,
+                                      vertical: 4,
+                                    ),
                                     leading: Container(
                                       width: 8,
                                       height: 8,
                                       decoration: BoxDecoration(
-                                          color: Colors.green.shade400,
-                                          shape: BoxShape.circle),
+                                        color: Colors.green.shade400,
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
-                                    title: Text(item.title,
-                                        style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500)),
-                                    trailing: Icon(Icons.visibility,
-                                        color: Colors.green.shade600, size: 18),
+                                    title: Text(
+                                      item.title,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    trailing: Icon(
+                                      Icons.visibility,
+                                      color: Colors.green.shade600,
+                                      size: 18,
+                                    ),
                                   ),
                                 );
                               }),
@@ -1857,31 +2016,42 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                           ),
                         );
                       }).toList(),
-                      if (layerGroups.any((g) => g.items
-                              .any((i) => layerStates[i.layerId] == true)) &&
+                      if (layerGroups.any(
+                            (g) => g.items.any(
+                              (i) => layerStates[i.layerId] == true,
+                            ),
+                          ) &&
                           savedLayers.any((l) => layerStates[l.id] == true))
                         Container(
                           margin: const EdgeInsets.symmetric(vertical: 16),
                           child: Row(
                             children: [
                               Expanded(
-                                  child: Divider(
-                                      color: Colors.grey.shade300,
-                                      thickness: 1)),
+                                child: Divider(
+                                  color: Colors.grey.shade300,
+                                  thickness: 1,
+                                ),
+                              ),
                               Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text('DIBUJOS',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey.shade600,
-                                        letterSpacing: 1)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                child: Text(
+                                  'DIBUJOS',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade600,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
                               ),
                               Expanded(
-                                  child: Divider(
-                                      color: Colors.grey.shade300,
-                                      thickness: 1)),
+                                child: Divider(
+                                  color: Colors.grey.shade300,
+                                  thickness: 1,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1892,9 +2062,10 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2))
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
                             ],
                           ),
                           child: Column(
@@ -1904,46 +2075,67 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                                 .asMap()
                                 .entries
                                 .map((entry) {
-                              final index = entry.key;
-                              final layer = entry.value;
-                              final activeLayers = savedLayers
-                                  .where((l) => layerStates[l.id] == true)
-                                  .toList();
-                              final isLast = index == activeLayers.length - 1;
-                              return Container(
-                                decoration: BoxDecoration(
-                                  border: !isLast
-                                      ? Border(
-                                          bottom: BorderSide(
-                                              color: Colors.grey.shade200,
-                                              width: 0.5))
-                                      : null,
-                                ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  leading: Container(
-                                    padding: const EdgeInsets.all(8),
+                                  final index = entry.key;
+                                  final layer = entry.value;
+                                  final activeLayers = savedLayers
+                                      .where((l) => layerStates[l.id] == true)
+                                      .toList();
+                                  final isLast =
+                                      index == activeLayers.length - 1;
+                                  return Container(
                                     decoration: BoxDecoration(
-                                        color: Colors.orange.shade50,
-                                        borderRadius: BorderRadius.circular(8)),
-                                    child: Icon(Icons.draw,
-                                        color: Colors.orange.shade600,
-                                        size: 16),
-                                  ),
-                                  title: Text(layer.name,
-                                      style: const TextStyle(
+                                      border: !isLast
+                                          ? Border(
+                                              bottom: BorderSide(
+                                                color: Colors.grey.shade200,
+                                                width: 0.5,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    child: ListTile(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 8,
+                                          ),
+                                      leading: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.shade50,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.draw,
+                                          color: Colors.orange.shade600,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      title: Text(
+                                        layer.name,
+                                        style: const TextStyle(
                                           fontSize: 14,
-                                          fontWeight: FontWeight.w500)),
-                                  subtitle: Text(_getLayerInfo(layer),
-                                      style: TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        _getLayerInfo(layer),
+                                        style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey.shade600)),
-                                  trailing: Icon(Icons.visibility,
-                                      color: Colors.orange.shade600, size: 18),
-                                ),
-                              );
-                            }).toList(),
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      trailing: Icon(
+                                        Icons.visibility,
+                                        color: Colors.orange.shade600,
+                                        size: 18,
+                                      ),
+                                    ),
+                                  );
+                                })
+                                .toList(),
                           ),
                         ),
                     ],
@@ -1957,16 +2149,18 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.white.withOpacity(0.95),
-                      Colors.grey.shade50
+                      Colors.grey.shade50,
                     ],
                   ),
                   border: Border(
-                      top: BorderSide(color: Colors.grey.shade300, width: 1)),
+                    top: BorderSide(color: Colors.grey.shade300, width: 1),
+                  ),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, -2))
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
                   ],
                 ),
                 child: Padding(
@@ -1980,24 +2174,34 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                                color: Colors.teal.shade50,
-                                borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.analytics_outlined,
-                                color: Colors.teal.shade600, size: 20),
+                              color: Colors.teal.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.analytics_outlined,
+                              color: Colors.teal.shade600,
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Análisis de Superposición',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey.shade800)),
-                              Text('Genera intersecciones entre capas activas',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600)),
+                              Text(
+                                'Análisis de Superposición',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                              Text(
+                                'Genera intersecciones entre capas activas',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -2007,13 +2211,16 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border:
-                              Border.all(color: Colors.grey.shade300, width: 1),
+                          border: Border.all(
+                            color: Colors.grey.shade300,
+                            width: 1,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2))
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
                           ],
                         ),
                         child: TextField(
@@ -2021,32 +2228,44 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                           decoration: InputDecoration(
                             hintText: 'Nombre de la superposición',
                             hintStyle: TextStyle(
-                                color: Colors.grey.shade500, fontSize: 14),
-                            prefixIcon: Icon(Icons.edit_outlined,
-                                color: Colors.grey.shade500, size: 20),
+                              color: Colors.grey.shade500,
+                              fontSize: 14,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.edit_outlined,
+                              color: Colors.grey.shade500,
+                              size: 20,
+                            ),
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 16),
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
                           ),
                           style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w500),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
                       Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          gradient: LinearGradient(colors: [
-                            Colors.teal.shade600,
-                            Colors.teal.shade700
-                          ]),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.teal.shade600,
+                              Colors.teal.shade700,
+                            ],
+                          ),
                           boxShadow: [
                             BoxShadow(
-                                color: Colors.teal.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4))
+                              color: Colors.teal.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
                           ],
                         ),
                         child: ElevatedButton(
@@ -2057,8 +2276,11 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                                 SnackBar(
                                   content: const Row(
                                     children: [
-                                      Icon(Icons.warning_amber_rounded,
-                                          color: Colors.white, size: 20),
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                                       SizedBox(width: 8),
                                       Text('Por favor, ingresa un nombre'),
                                     ],
@@ -2066,14 +2288,17 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                                   backgroundColor: Colors.orange.shade600,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8)),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
                               );
                               return;
                             }
 
-                            final nav =
-                                Navigator.of(context, rootNavigator: true);
+                            final nav = Navigator.of(
+                              context,
+                              rootNavigator: true,
+                            );
                             bool dialogShown = false;
                             try {
                               showDialog<void>(
@@ -2089,12 +2314,15 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                                           width: 24,
                                           height: 24,
                                           child: CircularProgressIndicator(
-                                              strokeWidth: 2),
+                                            strokeWidth: 2,
+                                          ),
                                         ),
                                         SizedBox(width: 16),
                                         Expanded(
-                                            child: Text(
-                                                'Generando superposición...')),
+                                          child: Text(
+                                            'Generando superposición...',
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -2102,8 +2330,10 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                               );
                               dialogShown = true;
 
-                              final files =
-                                  await _generateIntersection(context, name);
+                              final files = await _generateIntersection(
+                                context,
+                                name,
+                              );
 
                               if (dialogShown && nav.canPop()) {
                                 nav.pop();
@@ -2112,15 +2342,16 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
 
                               if (files == null || files.length < 2) return;
 
-                              await Share.shareXFiles(
-                                [XFile(files[0].path), XFile(files[1].path)],
-                                subject: 'Intersecciones geométricas',
-                              );
+                              await Share.shareXFiles([
+                                XFile(files[0].path),
+                                XFile(files[1].path),
+                              ], subject: 'Intersecciones geométricas');
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Archivos KMZ y PDF generados y compartidos correctamente'),
+                                    'Archivos KMZ y PDF generados y compartidos correctamente',
+                                  ),
                                 ),
                               );
                             } catch (e) {
@@ -2129,7 +2360,8 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                               }
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                    content: Text('Error: ${e.toString()}')),
+                                  content: Text('Error: ${e.toString()}'),
+                                ),
                               );
                             }
                           },
@@ -2137,21 +2369,30 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 16),
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.analytics,
-                                  color: Colors.white, size: 20),
+                              Icon(
+                                Icons.analytics,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                               SizedBox(width: 8),
-                              Text('Generar Superposición',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600)),
+                              Text(
+                                'Generar Superposición',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -2162,21 +2403,28 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: Colors.blue.shade200, width: 1),
+                          border: Border.all(
+                            color: Colors.blue.shade200,
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline,
-                                color: Colors.blue.shade600, size: 16),
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.blue.shade600,
+                              size: 16,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                  'Se analizarán ${layerStates.values.where((v) => v == true).length} capas activas',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.blue.shade700,
-                                      fontWeight: FontWeight.w500)),
+                                'Se analizarán ${layerStates.values.where((v) => v == true).length} capas activas',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -2210,7 +2458,8 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
           pageFormat: PdfPageFormat.a4,
           buildBackground: (context) => pw.Container(
             decoration: pw.BoxDecoration(
-                border: pw.Border.all(width: 1, color: PdfColors.grey300)),
+              border: pw.Border.all(width: 1, color: PdfColors.grey300),
+            ),
           ),
         ),
         build: (context) => [
@@ -2220,37 +2469,53 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Header(
-                    level: 0,
-                    child: pw.Text('REPORTE DE RESULTADOS DE SUPERPOSICIÓN',
-                        style: pw.TextStyle(fontSize: 24, font: ttf))),
+                  level: 0,
+                  child: pw.Text(
+                    'REPORTE DE RESULTADOS DE SUPERPOSICIÓN',
+                    style: pw.TextStyle(fontSize: 24, font: ttf),
+                  ),
+                ),
                 pw.SizedBox(height: 10),
-                pw.Text('Fecha: ${DateTime.now().toString().split('.')[0]}',
-                    style: pw.TextStyle(font: ttf)),
+                pw.Text(
+                  'Fecha: ${DateTime.now().toString().split('.')[0]}',
+                  style: pw.TextStyle(font: ttf),
+                ),
                 pw.Text('Datum: WGS84 – UTM', style: pw.TextStyle(font: ttf)),
-                pw.Text('Código de Consulta: $queryCode',
-                    style: pw.TextStyle(font: ttf)),
+                pw.Text(
+                  'Código de Consulta: $queryCode',
+                  style: pw.TextStyle(font: ttf),
+                ),
                 pw.SizedBox(height: 20),
-                pw.Text('CAPAS DE DIBUJO:',
-                    style: pw.TextStyle(
-                        font: ttf,
-                        fontSize: 16,
-                        fontWeight: pw.FontWeight.bold)),
+                pw.Text(
+                  'CAPAS DE DIBUJO:',
+                  style: pw.TextStyle(
+                    font: ttf,
+                    fontSize: 16,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
                 pw.SizedBox(height: 10),
                 _buildDrawingLayersTable(activeDrawingLayers, ttf),
                 pw.SizedBox(height: 20),
-                pw.Text('CAPAS TEMÁTICAS EN CONSULTA:',
-                    style: pw.TextStyle(
-                        font: ttf,
-                        fontSize: 16,
-                        fontWeight: pw.FontWeight.bold)),
+                pw.Text(
+                  'CAPAS TEMÁTICAS EN CONSULTA:',
+                  style: pw.TextStyle(
+                    font: ttf,
+                    fontSize: 16,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
                 pw.SizedBox(height: 10),
                 _buildThematicLayersTable(activeThematicLayers, ttf),
                 pw.SizedBox(height: 20),
-                pw.Text('RESULTADOS DE SUPERPOSICION:',
-                    style: pw.TextStyle(
-                        font: ttf,
-                        fontSize: 16,
-                        fontWeight: pw.FontWeight.bold)),
+                pw.Text(
+                  'RESULTADOS DE SUPERPOSICION:',
+                  style: pw.TextStyle(
+                    font: ttf,
+                    fontSize: 16,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
                 pw.SizedBox(height: 10),
                 _buildIntersectionResultsTable(allResults, ttf),
               ],
@@ -2262,22 +2527,30 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Header(
-                    level: 0,
-                    child: pw.Text('VISUALIZACIÓN DE INTERSECCIONES',
-                        style: pw.TextStyle(fontSize: 24, font: ttf))),
+                  level: 0,
+                  child: pw.Text(
+                    'VISUALIZACIÓN DE INTERSECCIONES',
+                    style: pw.TextStyle(fontSize: 24, font: ttf),
+                  ),
+                ),
                 pw.SizedBox(height: 20),
                 for (var entry in allResults.entries) ...[
                   pw.Text(
-                      'Capa: ${entry.key.replaceAll('sp_', '').replaceAll('_', ' ')}',
-                      style: pw.TextStyle(
-                          font: ttf,
-                          fontSize: 16,
-                          fontWeight: pw.FontWeight.bold)),
+                    'Capa: ${entry.key.replaceAll('sp_', '').replaceAll('_', ' ')}',
+                    style: pw.TextStyle(
+                      font: ttf,
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
                   pw.SizedBox(height: 10),
                   _buildIntersectionVisualization(
                     entry.value,
-                    Color(int.parse(
-                        '0xFF${_getColorForLayer(entry.key).substring(2)}')),
+                    Color(
+                      int.parse(
+                        '0xFF${_getColorForLayer(entry.key).substring(2)}',
+                      ),
+                    ),
                   ),
                   pw.SizedBox(height: 20),
                 ],
@@ -2290,21 +2563,29 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                    'Fecha de Reporte: ${DateTime.now().toString().split('.')[0]}',
-                    style: pw.TextStyle(
-                        font: ttf,
-                        fontSize: 12,
-                        fontWeight: pw.FontWeight.bold)),
-                pw.Text('Usuario: Admin 1',
-                    style: pw.TextStyle(
-                        font: ttf,
-                        fontSize: 12,
-                        fontWeight: pw.FontWeight.bold)),
-                pw.Text('Autor: InGeo V1-2025',
-                    style: pw.TextStyle(
-                        font: ttf,
-                        fontSize: 12,
-                        fontWeight: pw.FontWeight.bold)),
+                  'Fecha de Reporte: ${DateTime.now().toString().split('.')[0]}',
+                  style: pw.TextStyle(
+                    font: ttf,
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  'Usuario: Admin 1',
+                  style: pw.TextStyle(
+                    font: ttf,
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  'Autor: InGeo V1-2025',
+                  style: pw.TextStyle(
+                    font: ttf,
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
                 pw.SizedBox(height: 12),
                 pw.Center(child: pw.Image(logoImage, width: 240)),
                 pw.SizedBox(height: 12),
@@ -2341,55 +2622,64 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
         if (geomType == 'Polygon') {
           final outerRing = (coords[0] as List<dynamic>).map((coord) {
             return LatLng(
-                (coord[1] is int
-                    ? (coord[1] as int).toDouble()
-                    : coord[1] as double),
-                (coord[0] is int
-                    ? (coord[0] as int).toDouble()
-                    : coord[0] as double));
+              (coord[1] is int
+                  ? (coord[1] as int).toDouble()
+                  : coord[1] as double),
+              (coord[0] is int
+                  ? (coord[0] as int).toDouble()
+                  : coord[0] as double),
+            );
           }).toList();
           polygons.add(outerRing);
         } else if (geomType == 'MultiPolygon') {
           for (var polygon in coords) {
             final outerRing = (polygon[0] as List<dynamic>).map((coord) {
               return LatLng(
-                  (coord[1] is int
-                      ? (coord[1] as int).toDouble()
-                      : coord[1] as double),
-                  (coord[0] is int
-                      ? (coord[0] as int).toDouble()
-                      : coord[0] as double));
+                (coord[1] is int
+                    ? (coord[1] as int).toDouble()
+                    : coord[1] as double),
+                (coord[0] is int
+                    ? (coord[0] as int).toDouble()
+                    : coord[0] as double),
+              );
             }).toList();
             polygons.add(outerRing);
           }
         } else if (geomType == 'LineString') {
           final line = (coords as List<dynamic>).map((c) {
             return LatLng(
-                (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
-                (c[0] is int ? (c[0] as int).toDouble() : c[0] as double));
+              (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
+              (c[0] is int ? (c[0] as int).toDouble() : c[0] as double),
+            );
           }).toList();
           lines.add(line);
         } else if (geomType == 'MultiLineString') {
           for (var lineCoords in (coords as List<dynamic>)) {
             final line = (lineCoords as List<dynamic>).map((c) {
               return LatLng(
-                  (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
-                  (c[0] is int ? (c[0] as int).toDouble() : c[0] as double));
+                (c[1] is int ? (c[1] as int).toDouble() : c[1] as double),
+                (c[0] is int ? (c[0] as int).toDouble() : c[0] as double),
+              );
             }).toList();
             lines.add(line);
           }
         } else if (geomType == 'Point') {
           final lon = (coords as List<dynamic>)[0];
           final lat = (coords as List<dynamic>)[1];
-          pts.add(LatLng((lat is int ? lat.toDouble() : lat as double),
-              (lon is int ? lon.toDouble() : lon as double)));
+          pts.add(
+            LatLng(
+              (lat is int ? lat.toDouble() : lat as double),
+              (lon is int ? lon.toDouble() : lon as double),
+            ),
+          );
         }
       }
       if (polygons.isEmpty && lines.isEmpty && pts.isEmpty) {
         return pw.Container(
-            height: 100,
-            alignment: pw.Alignment.center,
-            child: pw.Text('No hay geometrías para visualizar'));
+          height: 100,
+          alignment: pw.Alignment.center,
+          child: pw.Text('No hay geometrías para visualizar'),
+        );
       }
 
       final all = <LatLng>[];
@@ -2418,20 +2708,25 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
       final paddedLatRange = latRange * 1.1;
       final paddedLngRange = lngRange * 1.1;
 
-      final pdfColor = PdfColor(layerColor.red / 255, layerColor.green / 255,
-          layerColor.blue / 255, 0.7);
+      final pdfColor = PdfColor(
+        layerColor.red / 255,
+        layerColor.green / 255,
+        layerColor.blue / 255,
+        0.7,
+      );
 
       return pw.Container(
         height: 250,
-        decoration:
-            pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey)),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey),
+        ),
         child: pw.CustomPaint(
           size: const PdfPoint(400, 250),
           painter: (context, size) {
             // Calculate scale to preserve aspect ratio
             final double dataAspect = paddedLngRange / paddedLatRange;
             final double canvasAspect = size.x / size.y;
-            
+
             double drawWidth, drawHeight;
             if (dataAspect > canvasAspect) {
               drawWidth = size.x;
@@ -2450,7 +2745,7 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
               // Map to standard Cartesian (Bottom-Left origin)
               return PdfPoint(
                 offsetX + xNorm * drawWidth,
-                offsetY + yNorm * drawHeight, 
+                offsetY + yNorm * drawHeight,
               );
             }
 
@@ -2488,28 +2783,29 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
             // Draw North Arrow (Top Right)
             final arrowX = size.x - 25;
             final arrowY = size.y - 25;
-            
+
             context.setStrokeColor(PdfColors.black);
             context.setLineWidth(1.5);
-            
+
             // Vertical line
             context.moveTo(arrowX, arrowY - 15);
             context.lineTo(arrowX, arrowY + 15);
             context.strokePath();
-            
+
             // Arrow head
             context.moveTo(arrowX - 4, arrowY + 8);
             context.lineTo(arrowX, arrowY + 15);
             context.lineTo(arrowX + 4, arrowY + 8);
             context.strokePath();
-            
+
             // 'N' letter (vector drawing to avoid font dependency)
             const nSize = 8.0;
-            final nY = arrowY - 20; // Above the arrow? Or below? Let's put 'N' on top.
-            // Actually, usually N is on top of arrow. 
+            final nY =
+                arrowY - 20; // Above the arrow? Or below? Let's put 'N' on top.
+            // Actually, usually N is on top of arrow.
             // Let's draw N above the arrow tip
-            final nTop = arrowY + 24; 
-            
+            final nTop = arrowY + 24;
+
             // Draw N at (arrowX - 4, nTop)
             context.setLineWidth(1.0);
             context.moveTo(arrowX - 3, nTop - 6);
@@ -2522,14 +2818,17 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
       );
     } catch (e) {
       return pw.Container(
-          height: 100,
-          alignment: pw.Alignment.center,
-          child: pw.Text('Error al visualizar: ${e.toString()}'));
+        height: 100,
+        alignment: pw.Alignment.center,
+        child: pw.Text('Error al visualizar: ${e.toString()}'),
+      );
     }
   }
 
   pw.Widget _buildDrawingLayersTable(
-      List<SavedDrawingLayer> layers, pw.Font font) {
+    List<SavedDrawingLayer> layers,
+    pw.Font font,
+  ) {
     pw.Widget _coordsCell(SavedDrawingLayer layer) {
       if (layer.lines.isNotEmpty) {
         final pts = layer.lines.first.polyline.points;
@@ -2543,11 +2842,15 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                 text: pw.TextSpan(
                   text: 'Inicio: ',
                   style: pw.TextStyle(
-                      font: font,
-                      color: PdfColors.black,
-                      fontWeight: pw.FontWeight.bold),
+                    font: font,
+                    color: PdfColors.black,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                   children: [
-                    pw.TextSpan(text: startUtm, style: pw.TextStyle(font: font))
+                    pw.TextSpan(
+                      text: startUtm,
+                      style: pw.TextStyle(font: font),
+                    ),
                   ],
                 ),
               ),
@@ -2555,11 +2858,15 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                 text: pw.TextSpan(
                   text: 'Fin: ',
                   style: pw.TextStyle(
-                      font: font,
-                      color: PdfColors.black,
-                      fontWeight: pw.FontWeight.bold),
+                    font: font,
+                    color: PdfColors.black,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                   children: [
-                    pw.TextSpan(text: endUtm, style: pw.TextStyle(font: font))
+                    pw.TextSpan(
+                      text: endUtm,
+                      style: pw.TextStyle(font: font),
+                    ),
                   ],
                 ),
               ),
@@ -2567,16 +2874,24 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
           );
         }
       } else if (layer.polygons.isNotEmpty) {
-        final centroid = _calculatePolygonCentroid(layer.polygons.first.points);
+        final centroid = _calculatePolygonCentroid(
+          layer.polygons.first.polygon.points,
+        );
         final utm = _latLngToUtmString(centroid);
         return pw.RichText(
           text: pw.TextSpan(
             text: 'Centroide: ',
             style: pw.TextStyle(
-                font: font,
-                color: PdfColors.black,
-                fontWeight: pw.FontWeight.bold),
-            children: [pw.TextSpan(text: utm, style: pw.TextStyle(font: font))],
+              font: font,
+              color: PdfColors.black,
+              fontWeight: pw.FontWeight.bold,
+            ),
+            children: [
+              pw.TextSpan(
+                text: utm,
+                style: pw.TextStyle(font: font),
+              ),
+            ],
           ),
         );
       } else if (layer.points.isNotEmpty) {
@@ -2585,10 +2900,16 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
           text: pw.TextSpan(
             text: 'Punto: ',
             style: pw.TextStyle(
-                font: font,
-                color: PdfColors.black,
-                fontWeight: pw.FontWeight.bold),
-            children: [pw.TextSpan(text: utm, style: pw.TextStyle(font: font))],
+              font: font,
+              color: PdfColors.black,
+              fontWeight: pw.FontWeight.bold,
+            ),
+            children: [
+              pw.TextSpan(
+                text: utm,
+                style: pw.TextStyle(font: font),
+              ),
+            ],
           ),
         );
       }
@@ -2602,21 +2923,31 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('${(meters / 1000).toStringAsFixed(2)} km',
-                style: pw.TextStyle(font: font)),
-            pw.Text('${meters.toStringAsFixed(0)} m',
-                style: pw.TextStyle(font: font)),
+            pw.Text(
+              '${(meters / 1000).toStringAsFixed(2)} km',
+              style: pw.TextStyle(font: font),
+            ),
+            pw.Text(
+              '${meters.toStringAsFixed(0)} m',
+              style: pw.TextStyle(font: font),
+            ),
           ],
         );
       } else if (layer.polygons.isNotEmpty) {
-        final area = _calculatePolygonAreaMeters2(layer.polygons.first.points);
+        final area = _calculatePolygonAreaMeters2(
+          layer.polygons.first.polygon.points,
+        );
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('${(area / 10000).toStringAsFixed(2)} Ha',
-                style: pw.TextStyle(font: font)),
-            pw.Text('${_formatThousands(area.round())} m²',
-                style: pw.TextStyle(font: font)),
+            pw.Text(
+              '${(area / 10000).toStringAsFixed(2)} Ha',
+              style: pw.TextStyle(font: font),
+            ),
+            pw.Text(
+              '${_formatThousands(area.round())} m²',
+              style: pw.TextStyle(font: font),
+            ),
           ],
         );
       }
@@ -2630,61 +2961,85 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
           decoration: const pw.BoxDecoration(color: PdfColors.grey200),
           children: [
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Nombre',
-                    style: pw.TextStyle(
-                        font: font, fontWeight: pw.FontWeight.bold))),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Nombre',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Coordenadas WGS84 - UTM',
-                    style: pw.TextStyle(
-                        font: font, fontWeight: pw.FontWeight.bold))),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Coordenadas WGS84 - UTM',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Medida',
-                    style: pw.TextStyle(
-                        font: font, fontWeight: pw.FontWeight.bold))),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Medida',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Puntos',
-                    style: pw.TextStyle(
-                        font: font, fontWeight: pw.FontWeight.bold))),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Puntos',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Líneas',
-                    style: pw.TextStyle(
-                        font: font, fontWeight: pw.FontWeight.bold))),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Líneas',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Polígonos',
-                    style: pw.TextStyle(
-                        font: font, fontWeight: pw.FontWeight.bold))),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Polígonos',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
           ],
         ),
         for (var layer in layers)
           pw.TableRow(
             children: [
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(layer.name, style: pw.TextStyle(font: font))),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(layer.name, style: pw.TextStyle(font: font)),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: _coordsCell(layer)),
+                padding: const pw.EdgeInsets.all(5),
+                child: _coordsCell(layer),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: _measureCell(layer)),
+                padding: const pw.EdgeInsets.all(5),
+                child: _measureCell(layer),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(layer.points.length.toString(),
-                      style: pw.TextStyle(font: font))),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(
+                  layer.points.length.toString(),
+                  style: pw.TextStyle(font: font),
+                ),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(layer.lines.length.toString(),
-                      style: pw.TextStyle(font: font))),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(
+                  layer.lines.length.toString(),
+                  style: pw.TextStyle(font: font),
+                ),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(layer.polygons.length.toString(),
-                      style: pw.TextStyle(font: font))),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(
+                  layer.polygons.length.toString(),
+                  style: pw.TextStyle(font: font),
+                ),
+              ),
             ],
           ),
       ],
@@ -2769,28 +3124,38 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
           decoration: const pw.BoxDecoration(color: PdfColors.grey200),
           children: [
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Nombre de capa',
-                    style: pw.TextStyle(
-                        font: font, fontWeight: pw.FontWeight.bold))),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Nombre de capa',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Grupo',
-                    style: pw.TextStyle(
-                        font: font, fontWeight: pw.FontWeight.bold))),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Grupo',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
           ],
         ),
         for (var layerId in layerIds)
           pw.TableRow(
             children: [
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(_nameForLayer(layerId),
-                      style: pw.TextStyle(font: font))),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(
+                  _nameForLayer(layerId),
+                  style: pw.TextStyle(font: font),
+                ),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(_groupForLayer(layerId),
-                      style: pw.TextStyle(font: font))),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(
+                  _groupForLayer(layerId),
+                  style: pw.TextStyle(font: font),
+                ),
+              ),
             ],
           ),
       ],
@@ -2798,26 +3163,34 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
   }
 
   pw.Widget _buildIntersectionResultsTable(
-      Map<String, Map<String, dynamic>> results, pw.Font font) {
+    Map<String, Map<String, dynamic>> results,
+    pw.Font font,
+  ) {
     final rows = <pw.TableRow>[
       pw.TableRow(
         decoration: const pw.BoxDecoration(color: PdfColors.grey200),
         children: [
           pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text('Inputs',
-                  style: pw.TextStyle(
-                      font: font, fontWeight: pw.FontWeight.bold))),
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(
+              'Inputs',
+              style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
           pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text('Descripción',
-                  style: pw.TextStyle(
-                      font: font, fontWeight: pw.FontWeight.bold))),
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(
+              'Descripción',
+              style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
           pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text('Área en Superposición',
-                  style: pw.TextStyle(
-                      font: font, fontWeight: pw.FontWeight.bold))),
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(
+              'Área en Superposición',
+              style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
         ],
       ),
     ];
@@ -2861,10 +3234,7 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
           }
         }
 
-        final groupFc = {
-          'type': 'FeatureCollection',
-          'features': g.value,
-        };
+        final groupFc = {'type': 'FeatureCollection', 'features': g.value};
         rows.add(
           pw.TableRow(
             children: [
@@ -2895,10 +3265,7 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
       }
     }
 
-    return pw.Table(
-      border: pw.TableBorder.all(),
-      children: rows,
-    );
+    return pw.Table(border: pw.TableBorder.all(), children: rows);
   }
 
   String _buildIntersectionDescription(String layerId, dynamic geoJson) {
@@ -3092,8 +3459,9 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
       final lon = (c as List<dynamic>)[0];
       final lat = c[1];
       final utm = UTM.fromLatLon(
-          lat: (lat is int ? lat.toDouble() : lat as double),
-          lon: (lon is int ? lon.toDouble() : lon as double));
+        lat: (lat is int ? lat.toDouble() : lat as double),
+        lon: (lon is int ? lon.toDouble() : lon as double),
+      );
       return [utm.easting.toDouble(), utm.northing.toDouble()];
     }).toList();
     if (pts.first[0] != pts.last[0] || pts.first[1] != pts.last[1]) {
@@ -3119,8 +3487,10 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
           final pts = (coords as List<dynamic>).map((c) {
             final lon = (c as List<dynamic>)[0];
             final lat = c[1];
-            return LatLng((lat is int ? lat.toDouble() : lat as double),
-                (lon is int ? lon.toDouble() : lon as double));
+            return LatLng(
+              (lat is int ? lat.toDouble() : lat as double),
+              (lon is int ? lon.toDouble() : lon as double),
+            );
           }).toList();
           for (int i = 0; i < pts.length - 1; i++) {
             totalLen += d.distance(pts[i], pts[i + 1]);
@@ -3130,8 +3500,10 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
             final pts = (line as List<dynamic>).map((c) {
               final lon = (c as List<dynamic>)[0];
               final lat = c[1];
-              return LatLng((lat is int ? lat.toDouble() : lat as double),
-                  (lon is int ? lon.toDouble() : lon as double));
+              return LatLng(
+                (lat is int ? lat.toDouble() : lat as double),
+                (lon is int ? lon.toDouble() : lon as double),
+              );
             }).toList();
             for (int i = 0; i < pts.length - 1; i++) {
               totalLen += d.distance(pts[i], pts[i + 1]);

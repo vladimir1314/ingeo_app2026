@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:ingeo_app/models/geometry_data.dart';
+import 'package:ingeo_app/models/labeled_marker.dart';
+import 'package:ingeo_app/models/saved_drawing_layer.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:xml/xml.dart';
 
@@ -137,6 +139,26 @@ class KmlParser {
     return geometries;
   }
 
+  String _cleanHtml(String html) {
+    if (!html.contains('<')) return html;
+
+    // Remove all tags
+    final RegExp exp = RegExp(r"<[^>]*>", multiLine: true, caseSensitive: true);
+    String result = html.replaceAll(exp, '');
+
+    // Simple entity decoding
+    result = result
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\n\n', '\n');
+
+    return result.trim();
+  }
+
   void _parseStyles() {
     for (final styleElem in xml.findAllElements('Style')) {
       final id = styleElem.getAttribute('id') ?? '';
@@ -195,11 +217,12 @@ class KmlParser {
     }
   }
 
-  List<Marker> parsePlacemarks() {
-    final placemarks = <Marker>[];
+  List<LabeledMarker> parsePlacemarks() {
+    final labeledMarkers = <LabeledMarker>[];
 
     for (final pm in xml.findAllElements('Placemark')) {
       final name = pm.getElement('name')?.text ?? '';
+      final description = pm.getElement('description')?.text ?? '';
       final styleUrl = pm.getElement('styleUrl')?.text ?? '';
       final coordText =
           pm.findAllElements('coordinates').map((e) => e.text).firstOrNull;
@@ -214,6 +237,33 @@ class KmlParser {
       final lat = double.tryParse(parts[1]);
 
       if (lat == null || lon == null) continue;
+
+      // Extract metadata
+      String locality = '';
+      String manualCoordinates = '';
+      String observation = _cleanHtml(description);
+      final Map<String, String> attributes = {};
+
+      final extendedData = pm.getElement('ExtendedData');
+      if (extendedData != null) {
+        for (final data in extendedData.findAllElements('Data')) {
+          final key = data.getAttribute('name');
+          final value = data.getElement('value')?.text;
+          if (key != null && value != null) {
+            attributes[key] = value;
+            if (key.toLowerCase().contains('localidad') ||
+                key.toLowerCase().contains('locality')) {
+              locality = value;
+            } else if (key.toLowerCase().contains('coord') ||
+                key.toLowerCase().contains('manual')) {
+              manualCoordinates = value;
+            } else if (key.toLowerCase().contains('obs') ||
+                key.toLowerCase().contains('note')) {
+              observation = value;
+            }
+          }
+        }
+      }
 
       final style = styles[styleUrl];
       Widget iconWidget = const Icon(Icons.place, color: Colors.red);
@@ -239,36 +289,50 @@ class KmlParser {
         }
       }
 
-      placemarks.add(
-        Marker(
-          point: LatLng(lat, lon),
-          width: 40,
-          height: 40,
-          child: Column(
-            children: [
-              Text(
-                name,
-                style: TextStyle(
-                  fontSize: 10 * (style?.labelScale ?? 1.0),
-                  color: style?.labelColor ?? Colors.purple,
-                ),
+      labeledMarkers.add(
+        LabeledMarker(
+          marker: Marker(
+            point: LatLng(lat, lon),
+            width: 40,
+            height: 40,
+            child: Column(
+              children: [
+                Text(
+                  name,
+                  style: TextStyle(
+                    fontSize: 10 * (style?.labelScale ?? 1.0),
+                    color: style?.labelColor ?? Colors.purple,
+                  ),
               ),
-              iconWidget,
-            ],
+                iconWidget,
+              ],
+            ),
           ),
+          label: name,
+          locality: locality,
+          manualCoordinates: manualCoordinates,
+          observation: observation,
+          geometry: GeometryData(
+            name: name,
+            type: 'point',
+            coordinates: [LatLng(lat, lon)],
+          ),
+          attributes: attributes,
         ),
       );
     }
 
-    return placemarks;
+    return labeledMarkers;
   }
 
-  List<Polyline> parsePolylines() {
-    final lines = <Polyline>[];
+  List<LabeledPolyline> parsePolylines() {
+    final lines = <LabeledPolyline>[];
 
     for (final pm in xml.findAllElements('Placemark')) {
       final lineString = pm.findAllElements('LineString').firstOrNull;
       final coords = lineString?.findElements('coordinates').firstOrNull?.text;
+      final name = pm.getElement('name')?.text ?? '';
+      final description = pm.getElement('description')?.text ?? '';
       final styleUrl = pm.getElement('styleUrl')?.text ?? '';
       if (coords == null) continue;
 
@@ -288,32 +352,72 @@ class KmlParser {
 
       final style = styles[styleUrl];
 
-      lines.add(Polyline(
-        points: points,
-        strokeWidth: style?.lineWidth ?? 3.0,
-        color: style?.lineColor ?? Colors.blue,
+      // Extract metadata
+      String locality = '';
+      String manualCoordinates = '';
+      String observation = _cleanHtml(description);
+      final Map<String, String> attributes = {};
+
+      final extendedData = pm.getElement('ExtendedData');
+      if (extendedData != null) {
+        for (final data in extendedData.findAllElements('Data')) {
+          final key = data.getAttribute('name');
+          final value = data.getElement('value')?.text;
+          if (key != null && value != null) {
+            attributes[key] = value;
+            if (key.toLowerCase().contains('localidad') ||
+                key.toLowerCase().contains('locality')) {
+              locality = value;
+            } else if (key.toLowerCase().contains('coord') ||
+                key.toLowerCase().contains('manual')) {
+              manualCoordinates = value;
+            } else if (key.toLowerCase().contains('obs') ||
+                key.toLowerCase().contains('note')) {
+              observation = value;
+            }
+          }
+        }
+      }
+
+      lines.add(LabeledPolyline(
+        polyline: Polyline(
+          points: points,
+          strokeWidth: style?.lineWidth ?? 3.0,
+          color: style?.lineColor ?? Colors.blue,
+        ),
+        label: name,
+        locality: locality,
+        manualCoordinates: manualCoordinates,
+        observation: observation,
+        attributes: attributes,
       ));
     }
 
     return lines;
   }
 
-  List<Polygon> parsePolygons() {
-    final polygons = <Polygon>[];
+  List<LabeledPolygon> parsePolygons() {
+    final polygons = <LabeledPolygon>[];
 
     for (final pm in xml.findAllElements('Placemark')) {
-      final polyElem = pm.findAllElements('Polygon').firstOrNull;
-      final coords = polyElem
-          ?.findAllElements('outerBoundaryIs')
-          .expand((e) => e.findElements('LinearRing'))
-          .expand((e) => e.findElements('coordinates'))
-          .map((e) => e.text)
-          .firstOrNull;
+      final poly = pm.findAllElements('Polygon').firstOrNull;
+      if (poly == null) continue;
 
+      final name = pm.getElement('name')?.text ?? '';
+      final description = pm.getElement('description')?.text ?? '';
       final styleUrl = pm.getElement('styleUrl')?.text ?? '';
-      if (coords == null) continue;
 
-      final points = coords
+      final outerBoundary = poly.findAllElements('outerBoundaryIs').firstOrNull;
+      if (outerBoundary == null) continue;
+
+      final linearRing = outerBoundary.findAllElements('LinearRing').firstOrNull;
+      if (linearRing == null) continue;
+
+      final coordText =
+          linearRing.findAllElements('coordinates').firstOrNull?.text;
+      if (coordText == null) continue;
+
+      final points = coordText
           .trim()
           .split(RegExp(r'\s+'))
           .map((c) {
@@ -327,13 +431,50 @@ class KmlParser {
           .whereType<LatLng>()
           .toList();
 
+      if (points.isEmpty) continue;
+
       final style = styles[styleUrl];
 
-      polygons.add(Polygon(
-        points: points,
-        color: (style?.polyColor ?? Colors.green).withOpacity(0.4),
-        borderColor: style?.lineColor ?? Colors.black,
-        borderStrokeWidth: style?.lineWidth ?? 2.0,
+      // Extract metadata
+      String locality = '';
+      String manualCoordinates = '';
+      String observation = _cleanHtml(description);
+      final Map<String, String> attributes = {};
+
+      final extendedData = pm.getElement('ExtendedData');
+      if (extendedData != null) {
+        for (final data in extendedData.findAllElements('Data')) {
+          final key = data.getAttribute('name');
+          final value = data.getElement('value')?.text;
+          if (key != null && value != null) {
+            attributes[key] = value;
+            if (key.toLowerCase().contains('localidad') ||
+                key.toLowerCase().contains('locality')) {
+              locality = value;
+            } else if (key.toLowerCase().contains('coord') ||
+                key.toLowerCase().contains('manual')) {
+              manualCoordinates = value;
+            } else if (key.toLowerCase().contains('obs') ||
+                key.toLowerCase().contains('note')) {
+              observation = value;
+            }
+          }
+        }
+      }
+
+      polygons.add(LabeledPolygon(
+        polygon: Polygon(
+          points: points,
+          color: style?.polyColor ?? Colors.blue.withOpacity(0.3),
+          isFilled: true,
+          borderStrokeWidth: style?.lineWidth ?? 2.0,
+          borderColor: style?.lineColor ?? Colors.blue,
+        ),
+        label: name,
+        locality: locality,
+        manualCoordinates: manualCoordinates,
+        observation: observation,
+        attributes: attributes,
       ));
     }
 

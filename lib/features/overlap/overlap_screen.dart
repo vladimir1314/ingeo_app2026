@@ -355,7 +355,7 @@ class _OverlapScreenState extends State<OverlapScreen> {
     List<LatLng> allPoints = [];
 
     for (final poly in layer.polygons) {
-      allPoints.addAll(poly.points);
+      allPoints.addAll(poly.polygon.points);
     }
 
     for (final line in layer.lines) {
@@ -401,8 +401,8 @@ class _OverlapScreenState extends State<OverlapScreen> {
         importedLayer.lines.first.polyline.points.isNotEmpty) {
       mapController.move(importedLayer.lines.first.polyline.points.first, 12.0);
     } else if (importedLayer.polygons.isNotEmpty &&
-        importedLayer.polygons.first.points.isNotEmpty) {
-      mapController.move(importedLayer.polygons.first.points.first, 12.0);
+        importedLayer.polygons.first.polygon.points.isNotEmpty) {
+      mapController.move(importedLayer.polygons.first.polygon.points.first, 12.0);
     }
   }
 
@@ -546,7 +546,10 @@ class _OverlapScreenState extends State<OverlapScreen> {
                               .toList(),
                         ),
                       if (layer.polygons.isNotEmpty)
-                        PolygonLayer(polygons: layer.polygons),
+                        PolygonLayer(
+                          polygons:
+                              layer.polygons.map((p) => p.polygon).toList(),
+                        ),
                     ];
                   })
                   .expand((layers) => layers),
