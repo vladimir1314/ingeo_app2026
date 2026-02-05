@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
 import 'wms_layer_info.dart';
@@ -11,7 +12,7 @@ Future<List<WmsLayerInfo>> fetchWmsLayersFromUrl(String baseUrl) async {
     throw Exception('No se pudo obtener las capas WMS');
   }
 
-  final document = XmlDocument.parse(response.body);
+  final document = XmlDocument.parse(utf8.decode(response.bodyBytes));
   final layers = <WmsLayerInfo>[];
 
   for (final layer in document.findAllElements('Layer')) {

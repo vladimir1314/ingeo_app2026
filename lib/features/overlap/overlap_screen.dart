@@ -402,7 +402,10 @@ class _OverlapScreenState extends State<OverlapScreen> {
       mapController.move(importedLayer.lines.first.polyline.points.first, 12.0);
     } else if (importedLayer.polygons.isNotEmpty &&
         importedLayer.polygons.first.polygon.points.isNotEmpty) {
-      mapController.move(importedLayer.polygons.first.polygon.points.first, 12.0);
+      mapController.move(
+        importedLayer.polygons.first.polygon.points.first,
+        12.0,
+      );
     }
   }
 
@@ -456,7 +459,11 @@ class _OverlapScreenState extends State<OverlapScreen> {
       final z = mapController.zoom;
       if (z.isFinite) zoomGuess = z;
     } catch (_) {}
-    final lat = centerPosition.latitude;
+
+    // final lat = centerPosition.latitude;
+    // Usamos latitud 0 para que la escala solo dependa del zoom
+    const lat = 0.0;
+
     final mpp =
         156543.03392 * math.cos(lat * math.pi / 180) / math.pow(2, zoomGuess);
     const dpi = 96.0;
@@ -467,7 +474,10 @@ class _OverlapScreenState extends State<OverlapScreen> {
   }
 
   void _setZoomFromScale(int scaleDenominator) {
-    final lat = centerPosition.latitude;
+    if (scaleDenominator <= 0) return;
+
+    // final lat = centerPosition.latitude;
+    const lat = 0.0;
     const dpi = 96.0;
     const inchesPerMeter = 39.37007874015748;
     const earthCircumferencePerTile = 156543.03392;
@@ -518,18 +528,19 @@ class _OverlapScreenState extends State<OverlapScreen> {
               },
             ),
             children: [
-              TileLayer(
-                urlTemplate: mapUrlTemplate,
-                userAgentPackageName: 'com.ingeo.app',
-                // Añadir atribución adecuada
-                // attribution: 'Map data © OpenStreetMap contributors',
-                // Añadir parámetros adicionales para evitar bloqueos
-                additionalOptions: const {'useCache': 'true'},
-                // Añadir subdominio para distribuir las peticiones
-                subdomains: const ['a', 'b', 'c'],
-                // Añadir tiempo de caché
-                tileProvider: NetworkTileProvider(),
-              ),
+              if (currentMapType != 'white')
+                TileLayer(
+                  urlTemplate: mapUrlTemplate,
+                  userAgentPackageName: 'com.ingeo.app',
+                  // Añadir atribución adecuada
+                  // attribution: 'Map data © OpenStreetMap contributors',
+                  // Añadir parámetros adicionales para evitar bloqueos
+                  additionalOptions: const {'useCache': 'true'},
+                  // Añadir subdominio para distribuir las peticiones
+                  subdomains: const ['a', 'b', 'c'],
+                  // Añadir tiempo de caché
+                  tileProvider: NetworkTileProvider(),
+                ),
               ...getWmsTileLayers(),
               ...savedLayers
                   .where((layer) => layerStates[layer.id] == true)
@@ -547,8 +558,9 @@ class _OverlapScreenState extends State<OverlapScreen> {
                         ),
                       if (layer.polygons.isNotEmpty)
                         PolygonLayer(
-                          polygons:
-                              layer.polygons.map((p) => p.polygon).toList(),
+                          polygons: layer.polygons
+                              .map((p) => p.polygon)
+                              .toList(),
                         ),
                     ];
                   })

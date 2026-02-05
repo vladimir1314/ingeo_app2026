@@ -67,6 +67,14 @@ class BaseMapSelector extends StatelessWidget {
             onSelected: onMapTypeChanged,
             imagePath: 'assets/images/terrain_preview.png',
           ),
+          const Divider(height: 1),
+          _MapTypeOption(
+            title: 'Mapa Blanco',
+            type: 'white',
+            currentType: currentMapType,
+            onSelected: onMapTypeChanged,
+            previewColor: Colors.white,
+          ),
         ],
       ),
     );
@@ -78,14 +86,16 @@ class _MapTypeOption extends StatelessWidget {
   final String type;
   final String currentType;
   final Function(String) onSelected;
-  final String imagePath;
+  final String? imagePath;
+  final Color? previewColor;
 
   const _MapTypeOption({
     required this.title,
     required this.type,
     required this.currentType,
     required this.onSelected,
-    required this.imagePath,
+    this.imagePath,
+    this.previewColor,
   });
 
   @override
@@ -101,12 +111,23 @@ class _MapTypeOption extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: Image.asset(
-                imagePath,
-                width: 24,
-                height: 24,
-                fit: BoxFit.cover,
-              ),
+              child: imagePath != null
+                  ? Image.asset(
+                      imagePath!,
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: previewColor ?? Colors.grey,
+                        border: previewColor == Colors.white
+                            ? Border.all(color: Colors.grey.shade300)
+                            : null,
+                      ),
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(

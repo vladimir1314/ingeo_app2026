@@ -1823,7 +1823,9 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
       final z = mapController.zoom;
       if (z.isFinite) zoomGuess = z;
     } catch (_) {}
-    final lat = centerPosition.latitude;
+    // final lat = centerPosition.latitude;
+    // Usamos latitud 0 para que la escala solo dependa del zoom
+    const lat = 0.0;
     final mpp =
         156543.03392 * math.cos(lat * math.pi / 180) / math.pow(2, zoomGuess);
     const dpi = 96.0;
@@ -1836,7 +1838,8 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
   void _setZoomFromScale(int scaleDenominator) {
     if (scaleDenominator <= 0) return;
 
-    final lat = centerPosition.latitude;
+    // final lat = centerPosition.latitude;
+    const lat = 0.0;
     const dpi = 96.0;
     const inchesPerMeter = 39.37007874015748;
     const earthCircumferencePerTile = 156543.03392;
@@ -2035,10 +2038,11 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
               },
             ),
             children: [
-              TileLayer(
-                urlTemplate: mapUrlTemplate,
-                userAgentPackageName: 'com.ingeo.app',
-              ),
+              if (currentMapType != 'white')
+                TileLayer(
+                  urlTemplate: mapUrlTemplate,
+                  userAgentPackageName: 'com.ingeo.app',
+                ),
               // Add WMS layers here
               ...getWmsTileLayers(),
               ..._buildWmsLayers(),

@@ -49,6 +49,50 @@ class LayerRepository {
       LayerItem('Delimitados', 'sp_sigda_delimitados'),
       LayerItem('Qhapaq Ñan', 'sp_sigda_qhapaq_nan'),
     ]),
+
+    LayerGroup('Cartografía de Peligros', [
+      LayerItem('Fotointerpretado', 'sp_cartografia_peligros_fotointerpretado'),
+      LayerItem('Peligros Geológicos', 'sp_peligrosgeologicos'),
+      LayerItem('Zonas Críticas', 'sp_zonas_criticas'),
+      LayerItem('Hábitat Crítico de la Serfor', 'sp_habitat_criticos_serfor'),
+    ]),
+
+    LayerGroup('Catastro Minero', [
+      LayerItem('Zona 19', 'sp_catastro_minero_z19'),
+      LayerItem('Zona 18', 'sp_catastro_minero_z18'),
+      LayerItem('Zona 17', 'sp_catastro_minero_z17'),
+    ]),
+
+    LayerGroup('Ordenamiento Forstal', [
+      LayerItem('Unidad Aprovechamiento', 'sp_unidad_aprovechamiento'),
+      LayerItem('Concesiones Forestales', 'sp_concesiones_forestales'),
+      LayerItem('Cesiones de Uso', 'sp_cesiones_uso'),
+      LayerItem('Bosques Protectores', 'sp_bosques_protectores'),
+      LayerItem(
+        'Bosques de Producción Permanente',
+        'sp_bosques_produccion_permanente',
+      ),
+      LayerItem(
+        'Bosque Local con Titulo Habilitante',
+        'sp_bosque_local_titulo_habilitante',
+      ),
+    ]),
+
+    LayerGroup('Restos Arqueológicos', [
+      LayerItem('BIP UBIGEO', 'sp_bip_ubigeo'),
+      LayerItem(
+        'Localidades Pertenecientes a Pueblos Indígenas',
+        'sp_localidad_pertenecientes_pueblos_indigenas',
+      ),
+      LayerItem('CIRAS Emitidos', 'sp_ciras_emitidos'),
+      LayerItem('Población Afroperuana', 'sp_pob_afroperuana'),
+    ]),
+
+    LayerGroup('Zonificación', [
+      LayerItem('Zonificación ACP', 'sp_zonificacion_acp'),
+      LayerItem('Zonificación ACR', 'sp_zonificacion_acr'),
+      LayerItem('Zonificación ANP', 'sp_zonificacion_anp'),
+    ]),
   ];
 
   /// Para casos donde quieras TODAS las capas juntas

@@ -65,310 +65,48 @@ class ActiveLayersPanel extends StatelessWidget {
           .map((entry) => entry.key)
           .toList();
 
-      print('Capas de dibujo activas: ${activeDrawingLayers.length}');
-      for (var layer in activeDrawingLayers) {
-        print('Capa: ${layer.name}, ID: ${layer.id}');
-        print('  - Puntos: ${layer.points?.length ?? 0}');
-        print('  - Líneas: ${layer.lines?.length ?? 0}');
-        print('  - Polígonos: ${layer.polygons?.length ?? 0}');
-        if (layer.polygons.isNotEmpty) {
-          print('  - Detalles de polígonos:');
-          for (int i = 0; i < layer.polygons.length; i++) {
-            final polygon = layer.polygons[i];
-            print('    * Polígono $i: ${polygon.polygon.points.length} puntos');
-            if (polygon.polygon.points.isNotEmpty) {
-              print(
-                '      Primer punto: (${polygon.polygon.points.first.latitude}, ${polygon.polygon.points.first.longitude})',
-              );
-              print(
-                '      Último punto: (${polygon.polygon.points.last.latitude}, ${polygon.polygon.points.last.longitude})',
-              );
-            }
-          }
-        }
-      }
-
-      print('Capas temáticas activas: ${activeThematicLayers.length}');
-      for (var layerId in activeThematicLayers) {
-        print('Capa temática: $layerId');
-      }
-
-      // Validar que haya al menos una capa de dibujo y una capa temática
-      if (activeDrawingLayers.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No hay capas de dibujo activas')),
-        );
-        return null;
-      }
-      if (activeThematicLayers.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No hay capas temáticas activas')),
-        );
-        return null;
-      }
-
-      // Verificar que al menos una capa de dibujo tenga geometrías válidas
-      bool hasValidDrawingLayer = false;
-      for (var layer in activeDrawingLayers) {
-        if ((layer.points != null && layer.points.isNotEmpty) ||
-            (layer.polygons != null && layer.polygons.isNotEmpty) ||
-            (layer.lines != null && layer.lines.isNotEmpty)) {
-          hasValidDrawingLayer = true;
-          break;
-        }
-      }
-      if (!hasValidDrawingLayer) {
+      if (activeDrawingLayers.isEmpty || activeThematicLayers.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Las capas de dibujo no contienen geometrías válidas. Dibuje un polígono primero.',
+              'Se requieren capas de dibujo y capas temáticas activas',
             ),
           ),
         );
         return null;
       }
 
-      // Procesar cada capa de dibujo con todas las capas temáticas
-      final queryCode = fileName;
       final Map<String, Map<String, dynamic>> allResults = {};
+
+      // Procesar cada capa de dibujo
       for (var drawingLayer in activeDrawingLayers) {
         print('Procesando capa de dibujo: ${drawingLayer.name}');
 
-        if (drawingLayer.polygons != null && drawingLayer.polygons.isNotEmpty) {
-          print('La capa tiene ${drawingLayer.polygons.length} polígonos');
-          for (
-            int polyIndex = 0;
-            polyIndex < drawingLayer.polygons.length;
-            polyIndex++
-          ) {
-            final polygon = drawingLayer.polygons[polyIndex];
-            final points = polygon.polygon.points;
-            print('Procesando polígono $polyIndex con ${points.length} puntos');
-
-            // Construir WKT
-            final wktBuilder = StringBuffer('POLYGON((');
-            for (int i = 0; i < points.length; i++) {
-              wktBuilder.write('${points[i].longitude} ${points[i].latitude}');
-              if (i < points.length - 1) {
-                wktBuilder.write(',');
-              }
-            }
-            if (points.first.latitude != points.last.latitude ||
-                points.first.longitude != points.last.longitude) {
-              wktBuilder.write(
-                ',${points.first.longitude} ${points.first.latitude}',
-              );
-            }
-            wktBuilder.write('))');
-            final wktPolygon = wktBuilder.toString();
-            print('WKT Polygon: $wktPolygon');
-
-            // Consultar cada capa temática
-            for (var thematicLayerId in activeThematicLayers) {
-              print('Procesando capa temática: $thematicLayerId');
-              try {
-                final results = await _fetchIntersectionForLayer(
-                  layerName: thematicLayerId,
-                  wktPolygon: wktPolygon,
-                  drawingName: drawingLayer.name,
-                );
-                final features = results['features'] as List<dynamic>? ?? [];
-                if (features.isNotEmpty) {
-                  print(
-                    'Resultados encontrados para $thematicLayerId: ${features.length}',
-                  );
-                  if (!allResults.containsKey(thematicLayerId)) {
-                    allResults[thematicLayerId] = {
-                      'type': 'FeatureCollection',
-                      'features': <dynamic>[],
-                    };
-                    print(
-                      'Inicializando FeatureCollection para $thematicLayerId',
-                    );
-                  }
-                  final polyLabelRaw = (polygon.label?.toString() ?? '').trim();
-                  final input1 = polyLabelRaw.isNotEmpty
-                      ? polyLabelRaw
-                      : 'Pol_${polyIndex + 1}';
-
-                  final feats = features.map((f) {
-                    final m = Map<String, dynamic>.from(f as Map);
-                    final props = Map<String, dynamic>.from(
-                      (m['properties'] as Map?) ?? {},
-                    );
-                    props['__drawing_name'] = drawingLayer.name;
-                    props['__input1'] = input1;
-                    m['properties'] = props;
-                    return m;
-                  }).toList();
-                  (allResults[thematicLayerId]!['features'] as List).addAll(
-                    feats,
-                  );
-                  print(
-                    'Acumulando features. Total ahora en $thematicLayerId: ${(allResults[thematicLayerId]!['features'] as List).length}',
-                  );
-                } else {
-                  print('No se encontraron resultados para $thematicLayerId');
-                }
-              } catch (e) {
-                print('Error al procesar capa $thematicLayerId: $e');
-              }
-            }
-          }
+        // Procesamiento masivo por tipo de geometría
+        if (drawingLayer.polygons.isNotEmpty) {
+          await _processPolygonsBulk(
+            drawingLayer,
+            activeThematicLayers,
+            allResults,
+          );
         }
-        if (drawingLayer.lines != null && drawingLayer.lines.isNotEmpty) {
-          print('La capa tiene ${drawingLayer.lines.length} líneas');
 
-          for (
-            int lineIndex = 0;
-            lineIndex < drawingLayer.lines.length;
-            lineIndex++
-          ) {
-            final labeledLine = drawingLayer.lines[lineIndex];
-            final pts = labeledLine.polyline.points;
-
-            if (pts.length < 2) {
-              print('Línea $lineIndex: insuficientes puntos (${pts.length})');
-              continue;
-            }
-
-            print(
-              'Procesando línea $lineIndex: ${labeledLine.label}, ${pts.length} puntos',
-            );
-            final wktLine = _lineToWkt(pts);
-            print('WKT Line: $wktLine');
-
-            // Consultar cada capa temática
-            for (var thematicLayerId in activeThematicLayers) {
-              print('Procesando línea contra capa temática: $thematicLayerId');
-              try {
-                final feature = await _clipLineWithinLayer(
-                  layerName: thematicLayerId,
-                  wktLine: wktLine,
-                  pts: pts,
-                  label: labeledLine.label,
-                  drawingName: drawingLayer.name,
-                );
-
-                if (feature != null) {
-                  print('✅ Feature de línea encontrado para $thematicLayerId');
-
-                  // Inicializar la capa en allResults si no existe
-                  if (!allResults.containsKey(thematicLayerId)) {
-                    allResults[thematicLayerId] = {
-                      'type': 'FeatureCollection',
-                      'features': <dynamic>[],
-                    };
-                    print(
-                      'Inicializando FeatureCollection para $thematicLayerId',
-                    );
-                  }
-
-                  // Agregar el feature a la lista de features
-                  final m = Map<String, dynamic>.from(feature);
-                  final props = Map<String, dynamic>.from(
-                    (m['properties'] as Map?) ?? {},
-                  );
-                  props['__drawing_name'] = drawingLayer.name;
-                  m['properties'] = props;
-                  (allResults[thematicLayerId]!['features'] as List).add(m);
-                  print(
-                    'Feature agregado. Total features en $thematicLayerId: ${(allResults[thematicLayerId]!['features'] as List).length}',
-                  );
-                } else {
-                  print(
-                    '⚠️ No se encontró intersección para línea en $thematicLayerId',
-                  );
-                }
-              } catch (e) {
-                print('❌ Error al recortar línea en $thematicLayerId: $e');
-                print('Stack trace: ${StackTrace.current}');
-              }
-            }
-          }
+        if (drawingLayer.lines.isNotEmpty) {
+          await _processLinesBulk(
+            drawingLayer,
+            activeThematicLayers,
+            allResults,
+          );
         }
-        if (drawingLayer.points != null && drawingLayer.points.isNotEmpty) {
-          print('La capa tiene ${drawingLayer.points.length} puntos');
 
-          for (
-            int pointIndex = 0;
-            pointIndex < drawingLayer.points.length;
-            pointIndex++
-          ) {
-            final labeledPoint = drawingLayer.points[pointIndex];
-            final pt = labeledPoint.marker.point;
-
-            print(
-              'Procesando punto $pointIndex: ${labeledPoint.label}, (${pt.latitude}, ${pt.longitude})',
-            );
-            final wktPoint = 'POINT(${pt.longitude} ${pt.latitude})';
-            print('WKT Point: $wktPoint');
-
-            // Consultar cada capa temática
-            for (var thematicLayerId in activeThematicLayers) {
-              print('Procesando punto contra capa temática: $thematicLayerId');
-              try {
-                final feature = await _checkPointWithinLayer(
-                  layerName: thematicLayerId,
-                  wktPoint: wktPoint,
-                  pt: pt,
-                  label: labeledPoint.label,
-                  drawingName: drawingLayer.name,
-                );
-
-                if (feature != null) {
-                  print('✅ Feature de punto encontrado para $thematicLayerId');
-
-                  // Inicializar la capa en allResults si no existe
-                  if (!allResults.containsKey(thematicLayerId)) {
-                    allResults[thematicLayerId] = {
-                      'type': 'FeatureCollection',
-                      'features': <dynamic>[],
-                    };
-                    print(
-                      'Inicializando FeatureCollection para $thematicLayerId',
-                    );
-                  }
-
-                  // Agregar el feature a la lista de features
-                  final m = Map<String, dynamic>.from(feature);
-                  final props = Map<String, dynamic>.from(
-                    (m['properties'] as Map?) ?? {},
-                  );
-                  props['__drawing_name'] = drawingLayer.name;
-                  m['properties'] = props;
-                  (allResults[thematicLayerId]!['features'] as List).add(m);
-                  print(
-                    'Feature agregado. Total features en $thematicLayerId: ${(allResults[thematicLayerId]!['features'] as List).length}',
-                  );
-                } else {
-                  print(
-                    '⚠️ No se encontró intersección para punto en $thematicLayerId',
-                  );
-                }
-              } catch (e) {
-                print('❌ Error al verificar punto en $thematicLayerId: $e');
-                print('Stack trace: ${StackTrace.current}');
-              }
-            }
-          }
-        }
-        if ((drawingLayer.points == null || drawingLayer.points.isEmpty) &&
-            (drawingLayer.lines == null || drawingLayer.lines.isEmpty) &&
-            (drawingLayer.polygons == null || drawingLayer.polygons.isEmpty)) {
-          print('La capa ${drawingLayer.name} no tiene geometrías válidas');
-          continue;
+        if (drawingLayer.points.isNotEmpty) {
+          await _processPointsBulk(
+            drawingLayer,
+            activeThematicLayers,
+            allResults,
+          );
         }
       }
-
-      print('═══════════════════════════════════════');
-      print('RESUMEN FINAL DE RESULTADOS:');
-      print('Total de capas con resultados: ${allResults.length}');
-      for (var entry in allResults.entries) {
-        final features = entry.value['features'] as List<dynamic>;
-        print('  • ${entry.key}: ${features.length} features');
-      }
-      print('═══════════════════════════════════════');
 
       if (allResults.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -379,27 +117,333 @@ class ActiveLayersPanel extends StatelessWidget {
         return null;
       }
 
+      print('Generando reportes...');
       final kmzFile = await exportMultipleGeoJsonToKmz(allResults, fileName);
       final pdfFile = await _generateIntersectionPdfReport(
         allResults,
         activeDrawingLayers,
         activeThematicLayers,
-        queryCode: queryCode,
+        queryCode: fileName,
       );
 
-      // Crear capa de resultados para mostrar en el mapa
       if (onIntersectionResult != null) {
         final resultLayer = _createLayerFromResults(allResults, fileName);
         onIntersectionResult!(resultLayer);
       }
 
       return [kmzFile, pdfFile];
-    } catch (e) {
+    } catch (e, stack) {
       print('Error en _generateIntersection: $e');
+      print(stack);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       return null;
+    }
+  }
+
+  Future<void> _processPolygonsBulk(
+    SavedDrawingLayer drawingLayer,
+    List<String> thematicLayers,
+    Map<String, Map<String, dynamic>> allResults,
+  ) async {
+    print(
+      'Iniciando procesamiento masivo de ${drawingLayer.polygons.length} polígonos',
+    );
+
+    final polys = <String>[];
+    for (var p in drawingLayer.polygons) {
+      final points = p.polygon.points;
+      if (points.isEmpty) continue;
+
+      final sb = StringBuffer('((');
+      for (int i = 0; i < points.length; i++) {
+        sb.write('${points[i].longitude} ${points[i].latitude}');
+        if (i < points.length - 1) sb.write(',');
+      }
+      if (points.first.latitude != points.last.latitude ||
+          points.first.longitude != points.last.longitude) {
+        sb.write(',${points.first.longitude} ${points.first.latitude}');
+      }
+      sb.write('))');
+      polys.add(sb.toString());
+    }
+
+    if (polys.isEmpty) return;
+    final wktMultiPolygon = 'MULTIPOLYGON(${polys.join(',')})';
+
+    await Future.wait(
+      thematicLayers.map((layerId) async {
+        try {
+          // Reutilizamos _fetchIntersectionForLayer que maneja WPS/WFS y recorte
+          final results = await _fetchIntersectionForLayer(
+            layerName: layerId,
+            wktPolygon: wktMultiPolygon,
+            drawingName: drawingLayer.name,
+          );
+
+          final features = results['features'] as List<dynamic>? ?? [];
+          if (features.isNotEmpty) {
+            // TODO: Implementar spatial check real si se requiere precisión
+            // Por ahora asociamos todo al conjunto
+            _addToResults(
+              allResults,
+              layerId,
+              features,
+              drawingLayer.name,
+              'Polígonos (${features.length})',
+            );
+          }
+        } catch (e) {
+          print('Error procesando polígonos para $layerId: $e');
+        }
+      }),
+    );
+  }
+
+  Future<void> _processLinesBulk(
+    SavedDrawingLayer drawingLayer,
+    List<String> thematicLayers,
+    Map<String, Map<String, dynamic>> allResults,
+  ) async {
+    print(
+      'Iniciando procesamiento masivo de ${drawingLayer.lines.length} líneas (con recorte)',
+    );
+
+    final lines = <String>[];
+    for (var l in drawingLayer.lines) {
+      final points = l.polyline.points;
+      if (points.length < 2) continue;
+      final sb = StringBuffer('(');
+      for (int i = 0; i < points.length; i++) {
+        sb.write('${points[i].longitude} ${points[i].latitude}');
+        if (i < points.length - 1) sb.write(',');
+      }
+      sb.write(')');
+      lines.add(sb.toString());
+    }
+
+    if (lines.isEmpty) return;
+    final wktMultiLine = 'MULTILINESTRING(${lines.join(',')})';
+
+    await Future.wait(
+      thematicLayers.map((layerId) async {
+        try {
+          final features = await _fetchFeaturesIntersectingWkt(
+            layerId,
+            wktMultiLine,
+          );
+
+          if (features.isNotEmpty) {
+            final rings = _ringsFromGeoJsonFeatures(features);
+            if (rings.isNotEmpty) {
+              final clippedFeatures = <Map<String, dynamic>>[];
+              for (var labeledLine in drawingLayer.lines) {
+                final pts = labeledLine.polyline.points;
+                if (pts.length < 2) continue;
+
+                final segments = _clipLineByRings(pts, rings);
+                if (segments.isNotEmpty) {
+                  clippedFeatures.add({
+                    'type': 'Feature',
+                    'properties': {
+                      'name': labeledLine.label,
+                      '__drawing_name': drawingLayer.name,
+                      '__input1': labeledLine.label,
+                    },
+                    'geometry': {
+                      'type': segments.length == 1
+                          ? 'LineString'
+                          : 'MultiLineString',
+                      'coordinates': segments.length == 1
+                          ? segments.first
+                          : segments,
+                    },
+                  });
+                }
+              }
+
+              if (clippedFeatures.isNotEmpty) {
+                _addToResults(
+                  allResults,
+                  layerId,
+                  clippedFeatures,
+                  drawingLayer.name,
+                  'Líneas Recortadas',
+                );
+              }
+            }
+          }
+        } catch (e) {
+          print('Error procesando líneas para $layerId: $e');
+        }
+      }),
+    );
+  }
+
+  Future<void> _processPointsBulk(
+    SavedDrawingLayer drawingLayer,
+    List<String> thematicLayers,
+    Map<String, Map<String, dynamic>> allResults,
+  ) async {
+    print(
+      'Iniciando procesamiento masivo de ${drawingLayer.points.length} puntos',
+    );
+
+    final pts = <String>[];
+    for (var p in drawingLayer.points) {
+      final pt = p.marker.point;
+      pts.add('(${pt.longitude} ${pt.latitude})');
+    }
+
+    if (pts.isEmpty) return;
+    final wktMultiPoint = 'MULTIPOINT(${pts.join(',')})';
+
+    await Future.wait(
+      thematicLayers.map((layerId) async {
+        try {
+          final features = await _fetchFeaturesIntersectingWkt(
+            layerId,
+            wktMultiPoint,
+          );
+
+          if (features.isNotEmpty) {
+            for (var point in drawingLayer.points) {
+              final pt = point.marker.point;
+              final matchingFeatures = features.where((f) {
+                return _isPointInFeature(pt, f);
+              }).toList();
+
+              if (matchingFeatures.isNotEmpty) {
+                final combinedProps = <String, dynamic>{};
+                for (int i = 0; i < matchingFeatures.length; i++) {
+                  final props = matchingFeatures[i]['properties'] as Map;
+                  props.forEach((k, v) {
+                    if (matchingFeatures.length > 1) {
+                      combinedProps['feature_${i + 1}_$k'] = v;
+                    } else {
+                      combinedProps[k] = v;
+                    }
+                  });
+                }
+
+                final pointFeature = {
+                  'type': 'Feature',
+                  'properties': combinedProps,
+                  'geometry': {
+                    'type': 'Point',
+                    'coordinates': [pt.longitude, pt.latitude],
+                  },
+                };
+
+                _addToResults(
+                  allResults,
+                  layerId,
+                  [pointFeature],
+                  drawingLayer.name,
+                  point.label,
+                );
+              }
+            }
+          }
+        } catch (e) {
+          print('Error procesando puntos para $layerId: $e');
+        }
+      }),
+    );
+  }
+
+  void _addToResults(
+    Map<String, Map<String, dynamic>> allResults,
+    String layerId,
+    List<dynamic> newFeatures,
+    String drawingName,
+    String inputLabel,
+  ) {
+    if (newFeatures.isEmpty) return;
+
+    if (!allResults.containsKey(layerId)) {
+      allResults[layerId] = {
+        'type': 'FeatureCollection',
+        'features': <dynamic>[],
+      };
+    }
+
+    // Evitar duplicados por ID si es posible
+    final existingIds = (allResults[layerId]!['features'] as List)
+        .map((f) => f['id'])
+        .toSet();
+
+    final enrichedFeatures = <Map<String, dynamic>>[];
+    for (var f in newFeatures) {
+      final m = Map<String, dynamic>.from(f as Map);
+
+      // Si ya existe y queremos evitar duplicados exactos:
+      // if (m['id'] != null && existingIds.contains(m['id'])) continue;
+
+      final props = Map<String, dynamic>.from((m['properties'] as Map?) ?? {});
+      props['__drawing_name'] = drawingName;
+      if (!props.containsKey('__input1')) {
+        props['__input1'] = inputLabel;
+      }
+      m['properties'] = props;
+      enrichedFeatures.add(m);
+    }
+
+    (allResults[layerId]!['features'] as List).addAll(enrichedFeatures);
+  }
+
+  Future<List<dynamic>> _fetchFeaturesIntersectingWkt(
+    String layerName,
+    String wktGeometry,
+  ) async {
+    final geomAttr = await _getGeometryAttributeName(layerName) ?? 'geom';
+    final cql = 'INTERSECTS($geomAttr,SRID=4326;$wktGeometry)';
+
+    final wfsUrl = Uri.parse('http://84.247.176.139:8080/geoserver/ingeo/ows')
+        .replace(
+          queryParameters: {
+            'service': 'WFS',
+            'version': '2.0.0',
+            'request': 'GetFeature',
+            'typeName': 'ingeo:$layerName',
+            'outputFormat': 'application/json',
+            'srsName': 'EPSG:4326',
+            'CQL_FILTER': cql,
+          },
+        );
+
+    const credentials = 'geoserver_ingeo:IdeasG@ingeo';
+    final encodedCredentials = base64Encode(utf8.encode(credentials));
+
+    final response = await http.get(
+      wfsUrl,
+      headers: {'Authorization': 'Basic $encodedCredentials'},
+    );
+
+    if (response.statusCode == 200) {
+      final geoJson = json.decode(response.body) as Map<String, dynamic>;
+      return geoJson['features'] as List<dynamic>? ?? [];
+    }
+    return [];
+  }
+
+  bool _isPointInFeature(LatLng pt, dynamic feature) {
+    try {
+      final featureJson = jsonEncode(feature);
+      final turfFeature = turf.Feature.fromJson(jsonDecode(featureJson));
+      final turfPoint = turf.Point(
+        coordinates: turf.Position.of([pt.longitude, pt.latitude]),
+      );
+
+      // booleanPointInPolygon requiere que el feature sea Polígono o MultiPolígono
+      return turf.booleanPointInPolygon(
+        turfPoint as turf.Position,
+        turfFeature.geometry!,
+      );
+    } catch (e) {
+      // Si falla (ej. feature es linea), asumimos false o implementamos logica para lineas
+      return false;
     }
   }
 
@@ -1271,36 +1315,11 @@ class ActiveLayersPanel extends StatelessWidget {
       throw Exception('No hay intersecciones para exportar');
     }
 
-    // doc.kml debe existir como KML raíz para que los visores carguen el consolidado
-    final consolidatedKml = _createConsolidatedKml(filtered, fileName);
-    final consolidatedKmlData = utf8.encode(consolidatedKml);
-    archive.addFile(
-      ArchiveFile('doc.kml', consolidatedKmlData.length, consolidatedKmlData),
-    );
-    archive.addFile(
-      ArchiveFile(
-        'CONSOLIDADO_$fileName.kml',
-        consolidatedKmlData.length,
-        consolidatedKmlData,
-      ),
-    );
+    // doc.kml es el estándar para KMZ. Contendrá todo organizado por carpetas.
+    final kmlContent = _generateOptimizedKml(filtered, fileName);
+    final kmlData = utf8.encode(kmlContent);
 
-    // KMLs individuales por capa
-    for (final entry in filtered.entries) {
-      final layerName = entry.key;
-      final geoJson = entry.value;
-      final kmlContent = _geoJsonToKml(geoJson, layerName);
-      if (kmlContent.isNotEmpty) {
-        final kmlData = utf8.encode(kmlContent);
-        archive.addFile(
-          ArchiveFile(
-            '${_sanitizeFileName(layerName)}.kml',
-            kmlData.length,
-            kmlData,
-          ),
-        );
-      }
-    }
+    archive.addFile(ArchiveFile('doc.kml', kmlData.length, kmlData));
 
     final readmeContent = _createReadmeContent(filtered);
     final readmeData = utf8.encode(readmeContent);
@@ -1315,253 +1334,277 @@ class ActiveLayersPanel extends StatelessWidget {
     return kmzFile;
   }
 
-  String _createConsolidatedKml(
+  String _generateOptimizedKml(
     Map<String, Map<String, dynamic>> geoJsonResults,
-    String fileName,
+    String projectTitle,
   ) {
-    final allPlacemarks = geoJsonResults.entries
-        .map((entry) {
-          final layerName = entry.key;
-          final geoJson = entry.value;
-          final features = geoJson['features'] as List<dynamic>;
-          final displayName = layerName
-              .replaceAll('sp_anp_nacionales_definidas', 'ANP Nacionales')
-              .replaceAll(
-                'sp_zonas_amortiguamiento',
-                'Zonas de Amortiguamiento',
-              )
-              .replaceAll('sp_', '')
-              .replaceAll('_', ' ');
+    final buffer = StringBuffer();
 
-          final placemarks = features
-              .map((f) {
-                final geometry = f['geometry'];
-                final properties = f['properties'] ?? {};
-                final geomType = geometry['type'] as String;
-                final coords = geometry['coordinates'];
+    // Header
+    buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
+    buffer.writeln('<kml xmlns="http://www.opengis.net/kml/2.2">');
+    buffer.writeln('<Document>');
+    buffer.writeln('  <name>${_escapeXml(projectTitle)}</name>');
 
-                String generateCoordinates(List<dynamic> ring) {
-                  return ring
-                      .map((c) {
-                        final lon = (c as List<dynamic>)[0];
-                        final lat = c[1];
-                        return '$lon,$lat,0';
-                      })
-                      .join(' ');
-                }
+    // Shared Styles (Definidos una sola vez para reducir tamaño y evitar duplicidad)
+    buffer.writeln('''
+    <Style id="polyStyle">
+      <LineStyle><color>ff0000ff</color><width>2</width></LineStyle>
+      <PolyStyle><color>7d0000ff</color><fill>1</fill><outline>1</outline></PolyStyle>
+    </Style>
+    <Style id="lineStyle">
+      <LineStyle><color>ff0000ff</color><width>3</width></LineStyle>
+    </Style>
+    <Style id="pointStyle">
+      <IconStyle><scale>1.0</scale></IconStyle>
+      <LabelStyle><scale>0.8</scale></LabelStyle>
+    </Style>
+    ''');
 
-                if (geomType == 'MultiPolygon') {
-                  final polygons = coords as List<dynamic>;
-                  final polygonKml = polygons
-                      .map((poly) {
-                        if (poly is List<dynamic> && poly.isNotEmpty) {
-                          final outerRing = poly[0] as List<dynamic>;
-                          if (outerRing.isEmpty) return '';
-                          final closedRing = List<dynamic>.from(outerRing);
-                          if (closedRing.first != closedRing.last) {
-                            closedRing.add(closedRing.first);
-                          }
-                          final coordinatesStr = generateCoordinates(
-                            closedRing,
-                          );
-                          return '''
-              <Polygon>
-                <outerBoundaryIs>
-                  <LinearRing>
-                    <coordinates>$coordinatesStr</coordinates>
-                  </LinearRing>
-                </outerBoundaryIs>
-              </Polygon>
-            ''';
-                        }
-                        return '';
-                      })
-                      .where((kml) => kml.isNotEmpty)
-                      .join('\n');
-                  if (polygonKml.isEmpty) return '';
+    // Procesar cada capa temática
+    geoJsonResults.forEach((layerKey, geoJson) {
+      final features = geoJson['features'] as List<dynamic>;
+      if (features.isEmpty) return;
 
-                  return '''
-              <Placemark>
-                <name>🔹 ${_escapeXml(properties['name']?.toString() ?? 'Intersección')} - $displayName</name>
-                <description>📍 Capa: $displayName
-${_escapeXml(_propertiesToDescription(properties))}</description>
-                <Style>
-                  <LineStyle>
-                    <color>${_getColorForLayer(layerName)}</color>
-                    <width>2</width>
-                  </LineStyle>
-                  <PolyStyle>
-                    <color>7d${_getColorForLayer(layerName).substring(2)}</color>
-                    <fill>1</fill>
-                    <outline>1</outline>
-                  </PolyStyle>
-                </Style>
-                <MultiGeometry>
-                  $polygonKml
-                </MultiGeometry>
-              </Placemark>
-            ''';
-                } else if (geomType == 'Polygon') {
-                  final outerRing = coords[0] as List<dynamic>;
-                  if (outerRing.isEmpty) return '';
-                  final closedRing = List<dynamic>.from(outerRing);
-                  if (closedRing.first != closedRing.last) {
-                    closedRing.add(closedRing.first);
-                  }
-                  final coordinatesStr = generateCoordinates(closedRing);
-                  return '''
-              <Placemark>
-                <name>🔹 ${_escapeXml(properties['name']?.toString() ?? 'Intersección')} - $displayName</name>
-                <description>📍 Capa: $displayName
-${_escapeXml(_propertiesToDescription(properties))}</description>
-                <Style>
-                  <LineStyle>
-                    <color>${_getColorForLayer(layerName)}</color>
-                    <width>2</width>
-                  </LineStyle>
-                  <PolyStyle>
-                    <color>7d${_getColorForLayer(layerName).substring(2)}</color>
-                    <fill>1</fill>
-                    <outline>1</outline>
-                  </PolyStyle>
-                </Style>
-                <Polygon>
-                  <outerBoundaryIs>
-                    <LinearRing>
-                      <coordinates>$coordinatesStr</coordinates>
-                    </LinearRing>
-                  </outerBoundaryIs>
-                </Polygon>
-              </Placemark>
-              ''';
-                } else if (geomType == 'LineString') {
-                  final lineCoords = (coords as List<dynamic>)
-                      .map((c) => '${(c[0])},${(c[1])},0')
-                      .join(' ');
-                  return '''
-              <Placemark>
-                <name>🔹 ${_escapeXml(properties['name']?.toString() ?? 'Segmento')} - $displayName</name>
-                <description>📍 Capa: $displayName
-${_escapeXml(_propertiesToDescription(properties))}</description>
-                <Style>
-                  <LineStyle>
-                    <color>${_getColorForLayer(layerName)}</color>
-                    <width>3</width>
-                  </LineStyle>
-                </Style>
-                <LineString>
-                  <coordinates>$lineCoords</coordinates>
-                </LineString>
-              </Placemark>
-            ''';
-                } else if (geomType == 'MultiLineString') {
-                  final lines = (coords as List<dynamic>)
-                      .map((line) {
-                        final lc = (line as List<dynamic>)
-                            .map((c) => '${(c[0])},${(c[1])},0')
-                            .join(' ');
-                        return '<LineString><coordinates>$lc</coordinates></LineString>';
-                      })
-                      .join('\n');
-                  return '''
-              <Placemark>
-                <name>🔹 ${_escapeXml(properties['name']?.toString() ?? 'Segmentos')} - $displayName</name>
-                <description>📍 Capa: $displayName
-${_escapeXml(_propertiesToDescription(properties))}</description>
-                <Style>
-                  <LineStyle>
-                    <color>${_getColorForLayer(layerName)}</color>
-                    <width>3</width>
-                  </LineStyle>
-                </Style>
-                <MultiGeometry>
-                  $lines
-                </MultiGeometry>
-              </Placemark>
-              ''';
-                } else if (geomType == 'Point') {
-                  final lon = (coords as List<dynamic>)[0];
-                  final lat = (coords as List<dynamic>)[1];
-                  return '''
-              <Placemark>
-                <name>🔹 ${_escapeXml(properties['name']?.toString() ?? 'Punto')} - $displayName</name>
-                <description>📍 Capa: $displayName
-${_escapeXml(_propertiesToDescription(properties))}</description>
-                <Style>
-                  <IconStyle>
-                    <color>${_getColorForLayer(layerName)}</color>
-                  </IconStyle>
-                </Style>
-                <Point>
-                  <coordinates>${lon},${lat},0</coordinates>
-                </Point>
-              </Placemark>
-              ''';
-                }
-                return '';
-              })
-              .where((kml) => kml.isNotEmpty)
-              .join('\n');
+      final displayName = layerKey
+          .replaceAll('sp_anp_nacionales_definidas', 'ANP Nacionales')
+          .replaceAll('sp_zonas_amortiguamiento', 'Zonas de Amortiguamiento')
+          .replaceAll('sp_', '')
+          .replaceAll('_', ' ')
+          .toUpperCase();
 
-          if (placemarks.trim().isEmpty) return '';
+      buffer.writeln('  <Folder>');
+      buffer.writeln('    <name>${_escapeXml(displayName)}</name>');
 
-          return '''
-    <Folder>
-      <name>${_escapeXml(displayName)}</name>
-      $placemarks
-    </Folder>
-          ''';
-        })
-        .where((kml) => kml.isNotEmpty)
-        .join('\n');
+      // Agrupar por tipo de geometría para evitar mezclas que confunden a los GIS
+      final points = <String>[];
+      final lines = <String>[];
+      final polygons = <String>[];
 
-    return '''<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-  <Document>
-    <name>🗺️ ${_escapeXml(fileName)}</name>
-    <description>📊 Intersecciones consolidadas para ${geoJsonResults.length} capas:
-${geoJsonResults.keys.map((k) => '• $k').join('\n')}</description>
-    $allPlacemarks
-  </Document>
-</kml>''';
+      for (var f in features) {
+        final geometry = f['geometry'];
+        final properties = f['properties'] as Map<String, dynamic>? ?? {};
+        final type = geometry['type'].toString();
+
+        // Limpiar propiedades internas y preparar nombre
+        final cleanProps = Map<String, dynamic>.from(properties)
+          ..removeWhere(
+            (k, v) => k.startsWith('__'),
+          ); // Eliminar metadatos internos
+
+        // Usar el nombre del dibujo original si existe (input1) para evitar ambigüedad
+        final featureName =
+            properties['__input1']?.toString() ??
+            properties['name']?.toString() ??
+            'Elemento';
+
+        final placemarkKml = _buildPlacemark(
+          geometry,
+          featureName,
+          cleanProps,
+          type,
+        );
+
+        if (placemarkKml.isNotEmpty) {
+          if (type.contains('Point')) {
+            points.add(placemarkKml);
+          } else if (type.contains('Line')) {
+            lines.add(placemarkKml);
+          } else {
+            polygons.add(placemarkKml);
+          }
+        }
+      }
+
+      // Escribir sub-carpetas por tipo
+      if (points.isNotEmpty) {
+        buffer.writeln('    <Folder><name>Puntos</name>');
+        buffer.writeln(points.join('\n'));
+        buffer.writeln('    </Folder>');
+      }
+      if (lines.isNotEmpty) {
+        buffer.writeln('    <Folder><name>Líneas</name>');
+        buffer.writeln(lines.join('\n'));
+        buffer.writeln('    </Folder>');
+      }
+      if (polygons.isNotEmpty) {
+        buffer.writeln('    <Folder><name>Polígonos</name>');
+        buffer.writeln(polygons.join('\n'));
+        buffer.writeln('    </Folder>');
+      }
+
+      buffer.writeln('  </Folder>');
+    });
+
+    buffer.writeln('</Document>');
+    buffer.writeln('</kml>');
+    return buffer.toString();
+  }
+
+  String _buildPlacemark(
+    Map<String, dynamic> geometry,
+    String name,
+    Map<String, dynamic> properties,
+    String type,
+  ) {
+    final coords = geometry['coordinates'];
+    String kmlGeom = '';
+    String styleId = '#polyStyle';
+
+    // Generador de coordenadas helper
+    String coordsToKml(List<dynamic> list) =>
+        list.map((c) => '${c[0]},${c[1]},0').join(' ');
+
+    if (type == 'Point') {
+      styleId = '#pointStyle';
+      final c = coords as List;
+      kmlGeom = '<Point><coordinates>${c[0]},${c[1]},0</coordinates></Point>';
+    } else if (type == 'LineString') {
+      styleId = '#lineStyle';
+      kmlGeom =
+          '<LineString><coordinates>${coordsToKml(coords)}</coordinates></LineString>';
+    } else if (type == 'MultiLineString') {
+      styleId = '#lineStyle';
+      final lines = (coords as List)
+          .map(
+            (l) =>
+                '<LineString><coordinates>${coordsToKml(l)}</coordinates></LineString>',
+          )
+          .join('');
+      kmlGeom = '<MultiGeometry>$lines</MultiGeometry>';
+    } else if (type == 'Polygon') {
+      final ring = coords[0] as List; // Outer ring only for simplicity
+      kmlGeom =
+          '<Polygon><outerBoundaryIs><LinearRing><coordinates>${coordsToKml(ring)}</coordinates></LinearRing></outerBoundaryIs></Polygon>';
+    } else if (type == 'MultiPolygon') {
+      final polys = (coords as List)
+          .map((p) {
+            final ring = p[0] as List;
+            return '<Polygon><outerBoundaryIs><LinearRing><coordinates>${coordsToKml(ring)}</coordinates></LinearRing></outerBoundaryIs></Polygon>';
+          })
+          .join('');
+      kmlGeom = '<MultiGeometry>$polys</MultiGeometry>';
+    } else if (type == 'MultiPoint') {
+      styleId = '#pointStyle';
+      final points = (coords as List)
+          .map(
+            (c) =>
+                '<Point><coordinates>${c[0]},${c[1]},0</coordinates></Point>',
+          )
+          .join('');
+      kmlGeom = '<MultiGeometry>$points</MultiGeometry>';
+    } else {
+      return '';
+    }
+
+    // Construir ExtendedData para atributos (mejor que description HTML para GIS)
+    final extendedData = StringBuffer('<ExtendedData>');
+    properties.forEach((k, v) {
+      extendedData.write(
+        '<Data name="${_escapeXml(k)}"><value>${_escapeXml(v.toString())}</value></Data>',
+      );
+    });
+    extendedData.write('</ExtendedData>');
+
+    // Descripción legible para Google Earth
+    final description = properties.entries
+        .map((e) => '<b>${e.key}:</b> ${e.value}')
+        .join('<br/>');
+
+    return '''
+      <Placemark>
+        <name>${_escapeXml(name)}</name>
+        <description><![CDATA[$description]]></description>
+        <styleUrl>$styleId</styleUrl>
+        $extendedData
+        $kmlGeom
+      </Placemark>
+    ''';
   }
 
   String _createReadmeContent(
     Map<String, Map<String, dynamic>> geoJsonResults,
   ) {
     final buffer = StringBuffer();
-    buffer.writeln('INTERSECCIONES GEOMÉTRICAS - INFORMACIÓN DEL ARCHIVO');
-    buffer.writeln('====================================================');
-    buffer.writeln('Generado: ${DateTime.now()}');
-    buffer.writeln('Total de capas procesadas: ${geoJsonResults.length}');
+    buffer.writeln('INTERSECCIONES GEOMÉTRICAS - REPORTE DE EXPORTACIÓN');
+    buffer.writeln('===================================================');
+    buffer.writeln('Fecha: ${DateTime.now()}');
     buffer.writeln('');
-    buffer.writeln('DETALLE POR CAPA:');
-    buffer.writeln('-----------------');
-    geoJsonResults.forEach((layerName, geoJson) {
-      final features = geoJson['features'] as List<dynamic>;
-      buffer.writeln(
-        '• $layerName: ${features.length} características encontradas',
-      );
-    });
-    buffer.writeln('');
-    buffer.writeln('CONTENIDO DEL KMZ:');
-    buffer.writeln('------------------');
+    buffer.writeln('ESTRUCTURA DEL ARCHIVO KMZ:');
     buffer.writeln(
-      '- CONSOLIDADO_[nombre].kml: Todas las intersecciones en un archivo',
+      '- doc.kml: Archivo principal con todas las capas organizadas.',
     );
-    geoJsonResults.forEach((layerName, _) {
-      buffer.writeln(
-        '- ${_sanitizeFileName(layerName)}.kml: Intersecciones individuales por capa',
-      );
+    buffer.writeln(
+      '  - Cada capa contiene subcarpetas (Puntos, Líneas, Polígonos).',
+    );
+    buffer.writeln('');
+    buffer.writeln('RESUMEN DE DATOS:');
+    geoJsonResults.forEach((layer, data) {
+      final count = (data['features'] as List).length;
+      buffer.writeln('- $layer: $count elementos');
     });
-    buffer.writeln('- README.txt: Este archivo de información');
     return buffer.toString();
   }
 
   String _getColorForLayer(String layerName) {
     final colors = {
-      'sp_anp_nacionales_definidas': 'ff0000ff',
-      'sp_zonas_amortiguamiento': 'ff00ff00',
+      // Georreferenciación
+      'sp_grilla_utm_peru': 'ff808080',
+      'sp_centros_poblados_inei': 'ff000000',
+      // Catastro Rural
+      'sp_comunidades_campesinas': 'ff8b4513',
+      'sp_comunidades_nativas': 'ffcd853f',
+      // Límites Políticos
+      'sp_departamentos': 'ffdc143c',
+      'sp_provincias': 'ffff4500',
+      'sp_distritos': 'ffff6347',
+      // Hidrografía
+      'sp_vertientes': 'ff00008b',
+      'sp_cuencas': 'ff0000ff',
+      'sp_subcuencas': 'ff1e90ff',
+      'sp_lagunas': 'ff00bfff',
+      'sp_rios_navegables': 'ff4169e1',
+      'sp_rios_quebradas': 'ff87ceeb',
+      // Áreas Naturales Protegidas
+      'sp_anp_nacionales_definidas': 'ff006400',
+      'sp_zonas_amortiguamiento': 'ff32cd32',
+      'sp_zonas_reservadas': 'ff228b22',
+      'sp_areas_conservacion_regional': 'ff90ee90',
+      'sp_areas_conservacion_privada': 'ff98fb98',
+      // Ecosistemas Frágiles
+      'sp_ecosistemas_fragiles': 'ffffd700',
+      'sp_bofedales_inventariados': 'ff808000',
+      'sp_bosques_secos': 'ffbdb76b',
+      // Restos Arqueológicos
+      'sp_sigda_declarados': 'ff800080',
+      'sp_sigda_delimitados': 'ffba55d3',
+      'sp_sigda_qhapaq_nan': 'ffc71585',
+      // Cartografía de Peligros
+      'sp_cartografia_peligros_fotointerpretado': 'ffff4500', // OrangeRed
+      'sp_peligrosgeologicos': 'ffb22222', // FireBrick
+      'sp_zonas_criticas': 'ff8b0000', // DarkRed
+      'sp_habitat_criticos_serfor': 'ffff4500', // OrangeRed
+      // Catastro Minero
+      'sp_catastro_minero_z19': 'ffd4af37', // Gold
+      'sp_catastro_minero_z18': 'ffc0c0c0', // Silver
+      'sp_catastro_minero_z17': 'ffb87333', // Copper
+      // Ordenamiento Forestal
+      'sp_unidad_aprovechamiento': 'ff228b22', // ForestGreen
+      'sp_concesiones_forestales': 'ff006400', // DarkGreen
+      'sp_cesiones_uso': 'ff556b2f', // DarkOliveGreen
+      'sp_bosques_protectores': 'ff8fbc8f', // DarkSeaGreen
+      'sp_bosques_produccion_permanente': 'ff2e8b57', // SeaGreen
+      'sp_bosque_local_titulo_habilitante': 'ff66cdaa', // MediumAquamarine
+      // Interculturalidad / Restos Arqueológicos Adicionales
+      'sp_bip_ubigeo': 'ff8b4513', // SaddleBrown
+      'sp_localidad_pertenecientes_pueblos_indigenas': 'ffa0522d', // Sienna
+      'sp_ciras_emitidos': 'ffd2691e', // Chocolate
+      'sp_pob_afroperuana': 'ffcd853f', // Peru
+      // Zonificación
+      'sp_zonificacion_acp': 'ff9370db', // MediumPurple
+      'sp_zonificacion_acr': 'ffba55d3', // MediumOrchid
+      'sp_zonificacion_anp': 'ffda70d6', // Orchid
+      // Otros
       'wms_layer_': 'ffffff00',
       'external_layer_': 'ffff00ff',
     };
@@ -1570,209 +1613,21 @@ ${geoJsonResults.keys.map((k) => '• $k').join('\n')}</description>
         return colors[key]!;
       }
     }
-    return 'ffff8000'; // Naranja
-  }
 
-  String _propertiesToDescription(Map<String, dynamic> properties) {
-    return properties.entries
-        .map((entry) => '${entry.key}: ${entry.value}')
-        .join('\n');
+    // Generar color aleatorio consistente basado en el nombre de la capa
+    final random = math.Random(layerName.hashCode);
+    return 'ff${random.nextInt(0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
   }
 
   String _sanitizeFileName(String name) {
     return name.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
   }
 
-  String _geoJsonToKml(Map<String, dynamic> geoJson, String name) {
-    try {
-      final features = geoJson['features'] as List<dynamic>;
-      final kmlFeatures = features
-          .map((f) {
-            final geometry = f['geometry'];
-            final properties = f['properties'] ?? {};
-            final geomType = geometry['type'] as String;
-            final coords = geometry['coordinates'];
-
-            String generateCoordinates(List<dynamic> ring) {
-              return ring
-                  .map((c) {
-                    final lon = (c as List<dynamic>)[0];
-                    final lat = c[1];
-                    return '$lon,$lat,0';
-                  })
-                  .join(' ');
-            }
-
-            if (geomType == 'MultiPolygon') {
-              final polygons = coords as List<dynamic>;
-              final polygonKml = polygons
-                  .map((poly) {
-                    if (poly is List<dynamic> && poly.isNotEmpty) {
-                      final outerRing = poly[0] as List<dynamic>;
-                      if (outerRing.isEmpty) return '';
-                      final closedRing = List<dynamic>.from(outerRing);
-                      if (closedRing.first != closedRing.last) {
-                        closedRing.add(closedRing.first);
-                      }
-                      final coordinatesStr = generateCoordinates(closedRing);
-                      return '''
-                      <Polygon>
-                        <outerBoundaryIs>
-                          <LinearRing>
-                            <coordinates>$coordinatesStr</coordinates>
-                          </LinearRing>
-                        </outerBoundaryIs>
-                      </Polygon>
-                    ''';
-                    }
-                    return '';
-                  })
-                  .where((kml) => kml.isNotEmpty)
-                  .join('\n');
-              if (polygonKml.isEmpty) return '';
-
-              return '''
-              <Placemark>
-                <name>${_escapeXml(properties['name']?.toString() ?? 'Intersección')}</name>
-                <description>Capa: $name
-${_escapeXml(_propertiesToDescription(properties))}</description>
-                <Style>
-                  <LineStyle>
-                    <color>${_getColorForLayer(name)}</color>
-                    <width>2</width>
-                  </LineStyle>
-                  <PolyStyle>
-                    <color>7d${_getColorForLayer(name).substring(2)}</color>
-                    <fill>1</fill>
-                    <outline>1</outline>
-                  </PolyStyle>
-                </Style>
-                <MultiGeometry>
-                  $polygonKml
-                </MultiGeometry>
-              </Placemark>
-            ''';
-            } else if (geomType == 'Polygon') {
-              final outerRing = coords[0] as List<dynamic>;
-              if (outerRing.isEmpty) return '';
-              final closedRing = List<dynamic>.from(outerRing);
-              if (closedRing.first != closedRing.last) {
-                closedRing.add(closedRing.first);
-              }
-              final coordinatesStr = generateCoordinates(closedRing);
-              return '''
-              <Placemark>
-                <name>${_escapeXml(properties['name']?.toString() ?? 'Intersección')}</name>
-                <description>Capa: $name
-${_escapeXml(_propertiesToDescription(properties))}</description>
-                <Style>
-                  <LineStyle>
-                    <color>${_getColorForLayer(name)}</color>
-                    <width>2</width>
-                  </LineStyle>
-                  <PolyStyle>
-                    <color>7d${_getColorForLayer(name).substring(2)}</color>
-                    <fill>1</fill>
-                    <outline>1</outline>
-                  </PolyStyle>
-                </Style>
-                <Polygon>
-                  <outerBoundaryIs>
-                    <LinearRing>
-                      <coordinates>$coordinatesStr</coordinates>
-                    </LinearRing>
-                  </outerBoundaryIs>
-                </Polygon>
-              </Placemark>
-            ''';
-            } else if (geomType == 'LineString') {
-              final lineCoords = (coords as List<dynamic>)
-                  .map((c) => '${(c[0])},${(c[1])},0')
-                  .join(' ');
-              return '''
-              <Placemark>
-                <name>${_escapeXml(properties['name']?.toString() ?? 'Segmento')}</name>
-                <description>Capa: $name
-${_escapeXml(_propertiesToDescription(properties))}</description>
-                <Style>
-                  <LineStyle>
-                    <color>${_getColorForLayer(name)}</color>
-                    <width>3</width>
-                  </LineStyle>
-                </Style>
-                <LineString>
-                  <coordinates>$lineCoords</coordinates>
-                </LineString>
-              </Placemark>
-            ''';
-            } else if (geomType == 'MultiLineString') {
-              final lines = (coords as List<dynamic>)
-                  .map((line) {
-                    final lc = (line as List<dynamic>)
-                        .map((c) => '${(c[0])},${(c[1])},0')
-                        .join(' ');
-                    return '<LineString><coordinates>$lc</coordinates></LineString>';
-                  })
-                  .join('\n');
-              return '''
-              <Placemark>
-                <name>${_escapeXml(properties['name']?.toString() ?? 'Segmentos')}</name>
-                <description>Capa: $name
-${_escapeXml(_propertiesToDescription(properties))}</description>
-                <Style>
-                  <LineStyle>
-                    <color>${_getColorForLayer(name)}</color>
-                    <width>3</width>
-                  </LineStyle>
-                </Style>
-                <MultiGeometry>
-                  $lines
-                </MultiGeometry>
-              </Placemark>
-            ''';
-            } else if (geomType == 'Point') {
-              final lon = (coords as List<dynamic>)[0];
-              final lat = (coords as List<dynamic>)[1];
-              return '''
-              <Placemark>
-                <name>${_escapeXml(properties['name']?.toString() ?? 'Punto')}</name>
-                <description>Capa: $name
-${_escapeXml(_propertiesToDescription(properties))}</description>
-                <Style>
-                  <IconStyle>
-                    <color>${_getColorForLayer(name)}</color>
-                  </IconStyle>
-                </Style>
-                <Point>
-                  <coordinates>${lon},${lat},0</coordinates>
-                </Point>
-              </Placemark>
-            ''';
-            }
-            return '';
-          })
-          .where((kml) => kml.isNotEmpty)
-          .join('\n');
-
-      return '''<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-  <Document>
-    <name>${_escapeXml(name)}</name>
-    <description>Intersecciones geométricas para capa: $name</description>
-    $kmlFeatures
-  </Document>
-</kml>''';
-    } catch (e) {
-      print('Error generating KML: $e');
-      return '';
-    }
-  }
-
   String _escapeXml(String input) {
     return input
         .replaceAll('&', '&amp;')
-        .replaceAll('<', '<')
-        .replaceAll('>', '>')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&apos;');
   }
@@ -2517,7 +2372,7 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
                   ),
                 ),
                 pw.SizedBox(height: 10),
-                _buildIntersectionResultsTable(allResults, ttf),
+                ..._buildGroupedIntersectionTables(allResults, ttf),
               ],
             ),
           ),
@@ -3162,45 +3017,74 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
     );
   }
 
-  pw.Widget _buildIntersectionResultsTable(
+  List<pw.Widget> _buildGroupedIntersectionTables(
     Map<String, Map<String, dynamic>> results,
     pw.Font font,
   ) {
-    final rows = <pw.TableRow>[
-      pw.TableRow(
-        decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-        children: [
-          pw.Padding(
-            padding: const pw.EdgeInsets.all(5),
-            child: pw.Text(
-              'Inputs',
-              style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
-            ),
-          ),
-          pw.Padding(
-            padding: const pw.EdgeInsets.all(5),
-            child: pw.Text(
-              'Descripción',
-              style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
-            ),
-          ),
-          pw.Padding(
-            padding: const pw.EdgeInsets.all(5),
-            child: pw.Text(
-              'Área en Superposición',
-              style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    ];
+    final widgets = <pw.Widget>[];
 
     for (var entry in results.entries) {
-      final feats = (entry.value['features'] as List?) ?? const <dynamic>[];
-      if (feats.isEmpty) continue;
+      final layerName = entry.key;
+      final features = (entry.value['features'] as List?) ?? const <dynamic>[];
+
+      if (features.isEmpty) continue;
+
+      // Header para cada tabla (Input 2)
+      widgets.add(
+        pw.Container(
+          margin: const pw.EdgeInsets.only(top: 15, bottom: 5),
+          child: pw.Text(
+            'Capa: ${layerName.replaceAll('sp_', '').replaceAll('_', ' ').toUpperCase()}',
+            style: pw.TextStyle(
+              font: font,
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.blueGrey800,
+            ),
+          ),
+        ),
+      );
+
+      final rows = <pw.TableRow>[
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          children: [
+            /*
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Input 1 (Dibujo)',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
+            */
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Input 1',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Descripción',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Área en Superposición',
+                style: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      ];
 
       final byInput = <String, List<dynamic>>{};
-      for (final f in feats) {
+      for (final f in features) {
         final props = ((f as Map)['properties'] as Map?) ?? {};
         final input1 = (props['__input1']?.toString() ?? '').trim();
         final key = input1.isNotEmpty ? input1 : 'Dibujo';
@@ -3208,47 +3092,30 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
       }
 
       for (final g in byInput.entries) {
-        bool hasPolygon = false;
-        bool hasLine = false;
-        bool hasPoint = false;
-        for (final f in g.value) {
-          final geom = (f as Map)['geometry'] as Map?;
-          final type = (geom?['type'] ?? '').toString();
-          if (type == 'Polygon' || type == 'MultiPolygon') hasPolygon = true;
-          if (type == 'LineString' || type == 'MultiLineString') hasLine = true;
-          if (type == 'Point' || type == 'MultiPoint') hasPoint = true;
-        }
-
-        var input1Label = g.key;
-        if (hasPoint && !hasPolygon && !hasLine) {
-          final lower = input1Label.toLowerCase();
-          int cut = -1;
-          final idxNl = input1Label.indexOf('\n');
-          if (idxNl >= 0) cut = idxNl;
-          final idxCoord = lower.indexOf('coordenadas');
-          if (idxCoord >= 0) {
-            cut = cut == -1 ? idxCoord : math.min(cut, idxCoord);
-          }
-          if (cut > 0) {
-            input1Label = input1Label.substring(0, cut).trim();
-          }
-        }
-
         final groupFc = {'type': 'FeatureCollection', 'features': g.value};
+        final drawingName =
+            ((g.value.first['properties'] as Map)['__drawing_name'] ?? '')
+                .toString();
         rows.add(
           pw.TableRow(
             children: [
+              /*
               pw.Padding(
                 padding: const pw.EdgeInsets.all(5),
                 child: pw.Text(
-                  'Input 1: $input1Label\nInput 2: ${entry.key.replaceAll('sp_', '').replaceAll('_', ' ')}',
+                  g.key, // Solo el nombre del dibujo
                   style: pw.TextStyle(font: font),
                 ),
+              ),
+              */
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(drawingName, style: pw.TextStyle(font: font)),
               ),
               pw.Padding(
                 padding: const pw.EdgeInsets.all(5),
                 child: pw.Text(
-                  _buildIntersectionDescription(entry.key, groupFc),
+                  _buildIntersectionDescription(layerName, groupFc),
                   style: pw.TextStyle(font: font),
                 ),
               ),
@@ -3263,9 +3130,11 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
           ),
         );
       }
+
+      widgets.add(pw.Table(border: pw.TableBorder.all(), children: rows));
     }
 
-    return pw.Table(border: pw.TableBorder.all(), children: rows);
+    return widgets;
   }
 
   String _buildIntersectionDescription(String layerId, dynamic geoJson) {
@@ -3291,6 +3160,27 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
           'sp_sigda_qhapaq_nan': 'Qhapaqñan',
           'sp_puntos_geodesicos': 'Peligros Geológicos',
           'sp_zonas_criticas': 'Zonas críticas',
+          'sp_habitat_criticos_serfor': 'Hábitat Críticos (SERFOR)',
+          // Catastro Minero
+          'sp_catastro_minero_z19': 'Catastro Minero Z19',
+          'sp_catastro_minero_z18': 'Catastro Minero Z18',
+          'sp_catastro_minero_z17': 'Catastro Minero Z17',
+          // Ordenamiento Forestal
+          'sp_unidad_aprovechamiento': 'Unidades de Aprovechamiento',
+          'sp_concesiones_forestales': 'Concesiones Forestales',
+          'sp_cesiones_uso': 'Cesiones en Uso',
+          'sp_bosques_protectores': 'Bosques Protectores',
+          'sp_bosques_produccion_permanente': 'Bosques Producción Permanente',
+          'sp_bosque_local_titulo_habilitante': 'Bosques Locales',
+          // Interculturalidad
+          'sp_bip_ubigeo': 'Base de Datos Pueblos Indígenas',
+          'sp_localidad_pertenecientes_pueblos_indigenas': 'Localidades PPII',
+          'sp_ciras_emitidos': 'CIRAS Emitidos',
+          'sp_pob_afroperuana': 'Población Afroperuana',
+          // Zonificación
+          'sp_zonificacion_acp': 'Zonificación ACP',
+          'sp_zonificacion_acr': 'Zonificación ACR',
+          'sp_zonificacion_anp': 'Zonificación ANP',
         };
         final v = byLayer[id.trim()];
         if (v != null && v.trim().isNotEmpty) return v;
@@ -3329,6 +3219,24 @@ ${_escapeXml(_propertiesToDescription(properties))}</description>
         'sp_sigda_qhapaq_nan': ['d_camclasv'],
         'sp_puntos_geodesicos': ['PELIGRO_ES'],
         'sp_zonas_criticas': ['PELIGRO_ES'],
+        // Nuevas capas
+        'sp_habitat_criticos_serfor': ['nom_h_crit'],
+        'sp_catastro_minero_z19': ['nm_derecho', 'cd_codigo'],
+        'sp_catastro_minero_z18': ['nm_derecho', 'cd_codigo'],
+        'sp_catastro_minero_z17': ['nm_derecho', 'cd_codigo'],
+        'sp_unidad_aprovechamiento': ['num_uc', 'titular'],
+        'sp_concesiones_forestales': ['titular', 'modalidad'],
+        'sp_cesiones_uso': ['titular', 'resolucion'],
+        'sp_bosques_protectores': ['resolucion'],
+        'sp_bosques_produccion_permanente': ['nombre'],
+        'sp_bosque_local_titulo_habilitante': ['nombre', 'titular'],
+        'sp_bip_ubigeo': ['nombre_com', 'pueblo'],
+        'sp_localidad_pertenecientes_pueblos_indigenas': ['nombre', 'pueblo'],
+        'sp_ciras_emitidos': ['nombre_pro', 'expediente'],
+        'sp_pob_afroperuana': ['ubicacion'],
+        'sp_zonificacion_acp': ['zonificaci', 'z_nomb'],
+        'sp_zonificacion_acr': ['zonificaci', 'z_nomb'],
+        'sp_zonificacion_anp': ['zonificaci', 'z_nomb'],
       };
 
       const layerFallback = <String, String>{

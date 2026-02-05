@@ -131,7 +131,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Icon(Icons.public, color: Colors.teal),
             SizedBox(width: 8),
-            Text('InGeo', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('INGEO', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -217,9 +217,7 @@ class DashboardCard extends StatelessWidget {
     if (feature == AppFeature.geolocation) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => const GeolocationScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const GeolocationScreen()),
       );
     } else if (feature == AppFeature.overlapAnalysis) {
       Navigator.push(
