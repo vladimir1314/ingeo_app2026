@@ -92,7 +92,10 @@ class _OverlapScreenState extends State<OverlapScreen> {
     'sp_cartografia_peligros': false,
   };
 
-  final List<LayerGroup> layerGroups = LayerRepository.overlapLayers;
+  final List<LayerGroup> layerGroups = [
+    ...LayerRepository.overlapLayers,
+    ...LayerRepository.geolocationLayers,
+  ];
 
   @override
   void initState() {

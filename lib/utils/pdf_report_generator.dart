@@ -45,15 +45,21 @@ class PdfReportGenerator {
               children: [
                 pw.Header(
                   level: 0,
-                  child: pw.Text('Reporte de Geometrías',
-                      style: pw.TextStyle(fontSize: 24, font: ttf)),
+                  child: pw.Text(
+                    'Reporte de Geometrías',
+                    style: pw.TextStyle(fontSize: 24, font: ttf),
+                  ),
                 ),
                 pw.SizedBox(height: 10),
-                pw.Text('Fecha: ${DateTime.now().toString().split('.')[0]}',
-                    style: pw.TextStyle(font: ttf)),
+                pw.Text(
+                  'Fecha: ${DateTime.now().toString().split('.')[0]}',
+                  style: pw.TextStyle(font: ttf),
+                ),
                 pw.SizedBox(height: 20),
-                pw.Text('Resumen General:',
-                    style: pw.TextStyle(font: ttf, fontSize: 16)),
+                pw.Text(
+                  'Resumen General:',
+                  style: pw.TextStyle(font: ttf, fontSize: 16),
+                ),
                 pw.SizedBox(height: 10),
                 _buildSummaryTable(layers),
               ],
@@ -62,11 +68,11 @@ class PdfReportGenerator {
           for (var layer in layers)
             if (layer.id.startsWith('saved_layer_')) ...[
               pw.Header(
-                  level: 1,
-                  child: pw.Text(layer.name, style: pw.TextStyle(font: ttf))),
+                level: 1,
+                child: pw.Text(layer.name, style: pw.TextStyle(font: ttf)),
+              ),
               _buildLayerStatistics(layer),
               pw.SizedBox(height: 20),
-
 
               pw.SizedBox(height: 20),
               // Insertamos la nueva tabla de detalles ANTES de coordenadas
@@ -82,15 +88,26 @@ class PdfReportGenerator {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                    'Fecha de Reporte: ${DateTime.now().toString().split(".")[0]}',
-                    style: pw.TextStyle(
-                        fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                pw.Text('Usuario: Admin 1',
-                    style: pw.TextStyle(
-                        fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                pw.Text('Autor: InGeo V1-2025',
-                    style: pw.TextStyle(
-                        fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                  'Fecha de Reporte: ${DateTime.now().toString().split(".")[0]}',
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  'Usuario: Admin 1',
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  'Autor: InGeo V1-2025',
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
                 pw.SizedBox(height: 40),
                 pw.Center(
                   child: pw.Container(
@@ -104,11 +121,13 @@ class PdfReportGenerator {
                   child: pw.Column(
                     children: [
                       pw.Text(
-                          'Transforma tu celular en un GPS inteligente y analiza la viabilidad geográfica',
-                          style: const pw.TextStyle(fontSize: 12)),
+                        'Transforma tu celular en un GPS inteligente y analiza la viabilidad geográfica',
+                        style: const pw.TextStyle(fontSize: 12),
+                      ),
                       pw.Text(
-                          'de tus proyectos en tiempo real y con datos de campo',
-                          style: const pw.TextStyle(fontSize: 12)),
+                        'de tus proyectos en tiempo real y con datos de campo',
+                        style: const pw.TextStyle(fontSize: 12),
+                      ),
                     ],
                   ),
                 ),
@@ -125,14 +144,13 @@ class PdfReportGenerator {
     await file.writeAsBytes(await pdf.save());
 
     try {
-      await Share.shareXFiles([XFile(file.path)],
-          text: 'Reporte de geometrías (PDF)');
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: 'Reporte de geometrías (PDF)');
     } catch (_) {}
 
     return file;
   }
-
-
 
   // Construye la tabla "Detalles de los objetos"
   static pw.Widget _buildObjectDetailsTable(SavedDrawingLayer layer) {
@@ -143,12 +161,21 @@ class PdfReportGenerator {
         decoration: const pw.BoxDecoration(color: PdfColors.grey300),
         children: [
           pw.Padding(
-              padding: const pw.EdgeInsets.all(5), child: pw.Text('Nombre')),
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text('Nombre'),
+          ),
           pw.Padding(
-              padding: const pw.EdgeInsets.all(5), child: pw.Text('Localidad')),
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text('Localidad'),
+          ),
           pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text('Observación')),
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text('Observación'),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text('Coordenadas Manuales'),
+          ),
         ],
       );
     }
@@ -156,19 +183,25 @@ class PdfReportGenerator {
     if (layer.points.isNotEmpty) {
       final rows = <pw.TableRow>[_buildHeaderRow()];
       for (final p in layer.points) {
-        final parsed = _parseLabel(p.label);
         rows.add(
           pw.TableRow(
             children: [
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(parsed['nombre'] ?? '')),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(p.label.split('\n').first),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(parsed['localidad'] ?? '')),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(p.locality),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(parsed['observacion'] ?? '')),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(p.observation),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(p.manualCoordinates),
+              ),
             ],
           ),
         );
@@ -182,19 +215,25 @@ class PdfReportGenerator {
     if (layer.lines.isNotEmpty) {
       final rows = <pw.TableRow>[_buildHeaderRow()];
       for (final l in layer.lines) {
-        final parsed = _parseLabel(l.label);
         rows.add(
           pw.TableRow(
             children: [
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(parsed['nombre'] ?? '')),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(l.label.split('\n').first),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(parsed['localidad'] ?? '')),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(l.locality),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(parsed['observacion'] ?? '')),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(l.observation),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(l.manualCoordinates),
+              ),
             ],
           ),
         );
@@ -208,19 +247,25 @@ class PdfReportGenerator {
     if (layer.polygons.isNotEmpty) {
       final rows = <pw.TableRow>[_buildHeaderRow()];
       for (final poly in layer.polygons) {
-        final parsed = _parseLabel(poly.label);
         rows.add(
           pw.TableRow(
             children: [
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(parsed['nombre'] ?? '')),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(poly.label.split('\n').first),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(parsed['localidad'] ?? '')),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(poly.locality),
+              ),
               pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text(parsed['observacion'] ?? '')),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(poly.observation),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text(poly.manualCoordinates),
+              ),
             ],
           ),
         );
@@ -239,11 +284,7 @@ class PdfReportGenerator {
 
   // Extrae nombre, localidad y observación desde el label.
   static Map<String, String> _parseLabel(String? label) {
-    final result = {
-      'nombre': '',
-      'localidad': '',
-      'observacion': '',
-    };
+    final result = {'nombre': '', 'localidad': '', 'observacion': ''};
     if (label == null || label.trim().isEmpty) return result;
 
     final lines = label.split('\n').map((l) => l.trim()).toList();
@@ -260,24 +301,26 @@ class PdfReportGenerator {
           lower.startsWith('observación');
     }
 
-    result['nombre'] =
-        lines.firstWhere((l) => l.isNotEmpty && !isMeta(l), orElse: () => '');
+    result['nombre'] = lines.firstWhere(
+      (l) => l.isNotEmpty && !isMeta(l),
+      orElse: () => '',
+    );
 
     for (final l in lines) {
       final lower = l.toLowerCase();
       if (lower.startsWith('localidad')) {
-        result['localidad'] =
-            l.split(':').length > 1 ? l.split(':')[1].trim() : '';
+        result['localidad'] = l.split(':').length > 1
+            ? l.split(':')[1].trim()
+            : '';
       } else if (lower.startsWith('observación') ||
           lower.startsWith('observacion')) {
-        result['observacion'] =
-            l.split(':').length > 1 ? l.split(':')[1].trim() : '';
+        result['observacion'] = l.split(':').length > 1
+            ? l.split(':')[1].trim()
+            : '';
       }
     }
     return result;
   }
-
-
 
   static pw.Widget _buildSummaryTable(List<SavedDrawingLayer> layers) {
     int totalPoints = 0;
@@ -298,44 +341,54 @@ class PdfReportGenerator {
         pw.TableRow(
           children: [
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Total de Capas')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text('Total de Capas'),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(layers
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                layers
                     .where((l) => l.id.startsWith('saved_layer_'))
                     .length
-                    .toString())),
+                    .toString(),
+              ),
+            ),
           ],
         ),
         pw.TableRow(
           children: [
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Total de Puntos')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text('Total de Puntos'),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(totalPoints.toString())),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(totalPoints.toString()),
+            ),
           ],
         ),
         pw.TableRow(
           children: [
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Total de Líneas')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text('Total de Líneas'),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(totalLines.toString())),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(totalLines.toString()),
+            ),
           ],
         ),
         pw.TableRow(
           children: [
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Total de Polígonos')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text('Total de Polígonos'),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(totalPolygons.toString())),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(totalPolygons.toString()),
+            ),
           ],
         ),
       ],
@@ -378,8 +431,6 @@ class PdfReportGenerator {
     );
   }
 
-
-
   static LatLng _getPolygonCentroid(List<LatLng> points) {
     double latitude = 0;
     double longitude = 0;
@@ -399,17 +450,25 @@ class PdfReportGenerator {
         decoration: const pw.BoxDecoration(color: PdfColors.grey300),
         children: [
           pw.Padding(
-              padding: const pw.EdgeInsets.all(5), child: pw.Text('Tipo')),
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text('Tipo'),
+          ),
           pw.Padding(
-              padding: const pw.EdgeInsets.all(5), child: pw.Text('Nombre')),
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text('Nombre'),
+          ),
           pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text('Coordenadas')),
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text('Coordenadas'),
+          ),
           pw.Padding(
-              padding: const pw.EdgeInsets.all(5), child: pw.Text('UTM')),
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text('UTM'),
+          ),
           pw.Padding(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text('Dimensiones')),
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text('Dimensiones'),
+          ),
         ],
       ),
     );
@@ -423,18 +482,25 @@ class PdfReportGenerator {
         pw.TableRow(
           children: [
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5), child: pw.Text('Punto')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text('Punto'),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(parsed['nombre'] ?? '')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(parsed['nombre'] ?? ''),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(
-                    '(${latLng.latitude.toStringAsFixed(5)}, ${latLng.longitude.toStringAsFixed(5)})')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                '(${latLng.latitude.toStringAsFixed(5)}, ${latLng.longitude.toStringAsFixed(5)})',
+              ),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(
-                    '${utm.easting.round()}E ${utm.northing.round()}N ${utm.zoneNumber}${utm.zoneLetter}')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                '${utm.easting.round()}E ${utm.northing.round()}N ${utm.zoneNumber}${utm.zoneLetter}',
+              ),
+            ),
             pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('')),
           ],
         ),
@@ -448,8 +514,10 @@ class PdfReportGenerator {
 
       final start = points.first;
       final end = points.last;
-      final startUtm =
-          UTM.fromLatLon(lat: start.latitude, lon: start.longitude);
+      final startUtm = UTM.fromLatLon(
+        lat: start.latitude,
+        lon: start.longitude,
+      );
       final endUtm = UTM.fromLatLon(lat: end.latitude, lon: end.longitude);
 
       final lenM = _calculateLineLengthMeters(points);
@@ -460,24 +528,33 @@ class PdfReportGenerator {
         pw.TableRow(
           children: [
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5), child: pw.Text('Línea')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text('Línea'),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(parsed['nombre'] ?? '')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(parsed['nombre'] ?? ''),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(
-                    'Inicio: (${start.latitude.toStringAsFixed(5)}, ${start.longitude.toStringAsFixed(5)})\n'
-                    'Fin: (${end.latitude.toStringAsFixed(5)}, ${end.longitude.toStringAsFixed(5)})')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Inicio: (${start.latitude.toStringAsFixed(5)}, ${start.longitude.toStringAsFixed(5)})\n'
+                'Fin: (${end.latitude.toStringAsFixed(5)}, ${end.longitude.toStringAsFixed(5)})',
+              ),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(
-                    'Inicio: ${startUtm.easting.round()}E ${startUtm.northing.round()}N ${startUtm.zoneNumber}${startUtm.zoneLetter}\n'
-                    'Fin: ${endUtm.easting.round()}E ${endUtm.northing.round()}N ${endUtm.zoneNumber}${endUtm.zoneLetter}')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Inicio: ${startUtm.easting.round()}E ${startUtm.northing.round()}N ${startUtm.zoneNumber}${startUtm.zoneLetter}\n'
+                'Fin: ${endUtm.easting.round()}E ${endUtm.northing.round()}N ${endUtm.zoneNumber}${endUtm.zoneLetter}',
+              ),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(
-                    '${lenM.toStringAsFixed(2)} m\n${lenKm.toStringAsFixed(3)} km')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                '${lenM.toStringAsFixed(2)} m\n${lenKm.toStringAsFixed(3)} km',
+              ),
+            ),
           ],
         ),
       );
@@ -487,8 +564,10 @@ class PdfReportGenerator {
     for (var polygon in layer.polygons) {
       final parsed = _parseLabel(polygon.label);
       final center = _getPolygonCentroid(polygon.polygon.points);
-      final centerUtm =
-          UTM.fromLatLon(lat: center.latitude, lon: center.longitude);
+      final centerUtm = UTM.fromLatLon(
+        lat: center.latitude,
+        lon: center.longitude,
+      );
 
       final areaM2 = _calculatePolygonAreaMeters2(polygon.polygon.points);
       final areaKm2 = areaM2 / 1000000.0;
@@ -497,23 +576,31 @@ class PdfReportGenerator {
         pw.TableRow(
           children: [
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text('Polígono')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text('Polígono'),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(parsed['nombre'] ?? '')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(parsed['nombre'] ?? ''),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(
-                    'Centroide: (${center.latitude.toStringAsFixed(5)}, ${center.longitude.toStringAsFixed(5)})')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                'Centroide: (${center.latitude.toStringAsFixed(5)}, ${center.longitude.toStringAsFixed(5)})',
+              ),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(
-                    '${centerUtm.easting.round()}E ${centerUtm.northing.round()}N ${centerUtm.zoneNumber}${centerUtm.zoneLetter}')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                '${centerUtm.easting.round()}E ${centerUtm.northing.round()}N ${centerUtm.zoneNumber}${centerUtm.zoneLetter}',
+              ),
+            ),
             pw.Padding(
-                padding: const pw.EdgeInsets.all(5),
-                child: pw.Text(
-                    '${areaM2.toStringAsFixed(2)} m²\n${areaKm2.toStringAsFixed(4)} km²')),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(
+                '${areaM2.toStringAsFixed(2)} m²\n${areaKm2.toStringAsFixed(4)} km²',
+              ),
+            ),
           ],
         ),
       );
@@ -522,13 +609,12 @@ class PdfReportGenerator {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text('Tabla de Coordenadas y Metadatos:',
-            style: const pw.TextStyle(fontSize: 14)),
-        pw.SizedBox(height: 10),
-        pw.Table(
-          border: pw.TableBorder.all(),
-          children: rows,
+        pw.Text(
+          'Tabla de Coordenadas y Metadatos:',
+          style: const pw.TextStyle(fontSize: 14),
         ),
+        pw.SizedBox(height: 10),
+        pw.Table(border: pw.TableBorder.all(), children: rows),
       ],
     );
   }
@@ -557,7 +643,8 @@ class PdfReportGenerator {
 
     double area = 0;
     for (int i = 0; i < utmPoints.length - 1; i++) {
-      area += utmPoints[i][0] * utmPoints[i + 1][1] -
+      area +=
+          utmPoints[i][0] * utmPoints[i + 1][1] -
           utmPoints[i + 1][0] * utmPoints[i][1];
     }
     return area.abs() / 2.0;
@@ -576,19 +663,18 @@ class PdfReportGenerator {
   }
 
   static Future<File> generateExcelReport(
-      List<SavedDrawingLayer> layers) async {
+    List<SavedDrawingLayer> layers,
+  ) async {
     final excel = Excel.createExcel();
 
-    // Crear hojas específicas
+    // Renombrar la hoja por defecto 'Sheet1' a 'Puntos' si existe.
+    // Esto evita tener que eliminar 'Sheet1', lo cual causa errores de lista inmutable y corrupción de archivo.
+    // Usar la hoja por defecto como Puntos
     final sheetPoints = excel['Puntos'];
+
+    // Crear las otras hojas
     final sheetLines = excel['Líneas'];
     final sheetPolygons = excel['Polígonos'];
-
-    // Eliminar la hoja por defecto si se desea, o dejarla.
-    // Excel crea una hoja "Sheet1" por defecto.
-    if (excel.sheets.containsKey('Sheet1')) {
-      excel.delete('Sheet1');
-    }
 
     // Encabezados para Puntos
     sheetPoints.appendRow([
@@ -599,7 +685,7 @@ class PdfReportGenerator {
       'UTM Este',
       'UTM Norte',
       'Zona',
-      'Fecha'
+      'Fecha',
     ]);
 
     // Encabezados para Líneas
@@ -611,7 +697,7 @@ class PdfReportGenerator {
       'Inicio Lon',
       'Fin Lat',
       'Fin Lon',
-      'Fecha'
+      'Fecha',
     ]);
 
     // Encabezados para Polígonos
@@ -622,15 +708,14 @@ class PdfReportGenerator {
       'Perímetro (m)',
       'Centroide Lat',
       'Centroide Lon',
-      'Fecha'
+      'Fecha',
     ]);
 
     for (final layer in layers) {
       // Puntos
       for (final point in layer.points) {
         final latLng = point.marker.point;
-        final utm =
-            UTM.fromLatLon(lat: latLng.latitude, lon: latLng.longitude);
+        final utm = UTM.fromLatLon(lat: latLng.latitude, lon: latLng.longitude);
 
         sheetPoints.appendRow([
           layer.name,
@@ -648,7 +733,7 @@ class PdfReportGenerator {
       for (final line in layer.lines) {
         final pts = line.polyline.points;
         if (pts.length < 2) continue;
-        
+
         // Calcular longitud total
         double length = 0;
         final distance = const Distance();
@@ -674,7 +759,7 @@ class PdfReportGenerator {
       // Polígonos
       for (final polygon in layer.polygons) {
         if (polygon.polygon.points.length < 3) continue;
-        
+
         final center = _getPolygonCentroid(polygon.polygon.points);
         final area = _calculatePolygonAreaMeters2(polygon.polygon.points);
         final perimeter = _calculatePolygonPerimeter(polygon.polygon.points);

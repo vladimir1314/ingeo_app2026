@@ -130,6 +130,10 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
         return 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}';
       case 'google_maps':
         return 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+      case 'light': // Fallback for legacy 'white'
+        return 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+      case 'dark':
+        return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
       default:
         return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     }
@@ -1712,11 +1716,7 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
                   content: Text('Dibujo etiquetado'),
                   duration: Duration(seconds: 3),
                   behavior: SnackBarBehavior.floating,
-                  margin: EdgeInsets.only(
-                    top: 20,
-                    left: 16,
-                    right: 16,
-                  ),
+                  margin: EdgeInsets.only(top: 20, left: 16, right: 16),
                 ),
               );
             }
@@ -2038,11 +2038,11 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
               },
             ),
             children: [
-              if (currentMapType != 'white')
-                TileLayer(
-                  urlTemplate: mapUrlTemplate,
-                  userAgentPackageName: 'com.ingeo.app',
-                ),
+              TileLayer(
+                urlTemplate: mapUrlTemplate,
+                userAgentPackageName: 'com.ingeo.app',
+                subdomains: const ['a', 'b', 'c'],
+              ),
               // Add WMS layers here
               ...getWmsTileLayers(),
               ..._buildWmsLayers(),
@@ -2753,8 +2753,9 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
                   ValueListenableBuilder<bool>(
                     valueListenable: AccessControlService().isAuthenticated,
                     builder: (context, isAuth, child) {
-                      final hasAccess = AccessControlService()
-                          .canAccess(AppFeature.trackRecording);
+                      final hasAccess = AccessControlService().canAccess(
+                        AppFeature.trackRecording,
+                      );
                       final isLocked = !hasAccess;
 
                       return FloatingActionButton(
@@ -2776,8 +2777,8 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
                         backgroundColor: isLocked
                             ? Colors.grey.withOpacity(0.7)
                             : (isTracking
-                                ? const Color(0xFF9F0712)
-                                : Colors.teal.withOpacity(0.7)),
+                                  ? const Color(0xFF9F0712)
+                                  : Colors.teal.withOpacity(0.7)),
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
@@ -2800,7 +2801,9 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
                                 const Text(
                                   'Track',
                                   style: TextStyle(
-                                      fontSize: 10, color: Colors.white),
+                                    fontSize: 10,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ],
                             ),
@@ -3012,10 +3015,10 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
       name: name,
       createdAt: DateTime.now(),
     );
-    
+
     final updatedFolders = List<Folder>.from(folders)..add(newFolder);
     await _saveFolders(updatedFolders);
-    
+
     return newFolder;
   }
 
@@ -3139,7 +3142,10 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
       mapController.move(importedLayer.lines.first.polyline.points.first, 12.0);
     } else if (importedLayer.polygons.isNotEmpty &&
         importedLayer.polygons.first.polygon.points.isNotEmpty) {
-      mapController.move(importedLayer.polygons.first.polygon.points.first, 12.0);
+      mapController.move(
+        importedLayer.polygons.first.polygon.points.first,
+        12.0,
+      );
     }
   }
 }

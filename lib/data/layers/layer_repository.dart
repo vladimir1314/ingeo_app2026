@@ -38,11 +38,16 @@ class LayerRepository {
         'Áreas de Conservación Privada',
         'sp_areas_conservacion_privada',
       ),
+      LayerItem('Zonificación ANP', 'sp_zonificacion_anp'),
+      LayerItem('Zonificación ACR', 'sp_zonificacion_acr'),
+      LayerItem('Zonificación ACP', 'sp_zonificacion_acp'),
     ]),
+
     LayerGroup('Ecosistemas Frágiles', [
       LayerItem('Ecosistemas Frágiles', 'sp_ecosistemas_fragiles'),
       LayerItem('Bofedales Inventariados', 'sp_bofedales_inventariados'),
       LayerItem('Bosques Secos', 'sp_bosques_secos'),
+      LayerItem('Habitat Críticos', 'sp_habitat_criticos_serfor'),
     ]),
     LayerGroup('Restos Arqueológicos', [
       LayerItem('Declarados', 'sp_sigda_declarados'),
@@ -50,48 +55,46 @@ class LayerRepository {
       LayerItem('Qhapaq Ñan', 'sp_sigda_qhapaq_nan'),
     ]),
 
-    LayerGroup('Cartografía de Peligros', [
-      LayerItem('Fotointerpretado', 'sp_cartografia_peligros_fotointerpretado'),
+    LayerGroup('Peligros Geológicos', [
       LayerItem('Peligros Geológicos', 'sp_peligrosgeologicos'),
       LayerItem('Zonas Críticas', 'sp_zonas_criticas'),
-      LayerItem('Hábitat Crítico de la Serfor', 'sp_habitat_criticos_serfor'),
-    ]),
-
-    LayerGroup('Catastro Minero', [
-      LayerItem('Zona 19', 'sp_catastro_minero_z19'),
-      LayerItem('Zona 18', 'sp_catastro_minero_z18'),
-      LayerItem('Zona 17', 'sp_catastro_minero_z17'),
-    ]),
-
-    LayerGroup('Ordenamiento Forstal', [
-      LayerItem('Unidad Aprovechamiento', 'sp_unidad_aprovechamiento'),
-      LayerItem('Concesiones Forestales', 'sp_concesiones_forestales'),
-      LayerItem('Cesiones de Uso', 'sp_cesiones_uso'),
-      LayerItem('Bosques Protectores', 'sp_bosques_protectores'),
       LayerItem(
-        'Bosques de Producción Permanente',
-        'sp_bosques_produccion_permanente',
+        'Cartografia Peligros Fotointerpretado',
+        'sp_cartografia_peligros_fotointerpretado',
       ),
       LayerItem(
-        'Bosque Local con Titulo Habilitante',
-        'sp_bosque_local_titulo_habilitante',
+        'Zonas Críticas FEN-2023-2024',
+        'sp_zonas_criticas_fen_2023_2024',
       ),
     ]),
 
     LayerGroup('Restos Arqueológicos', [
-      LayerItem('BIP UBIGEO', 'sp_bip_ubigeo'),
+      LayerItem('Población Afroperuana', 'sp_pob_afroperuana'),
+      LayerItem('CIRAS Emitidos', 'sp_ciras_emitidos'),
       LayerItem(
         'Localidades Pertenecientes a Pueblos Indígenas',
         'sp_localidad_pertenecientes_pueblos_indigenas',
       ),
-      LayerItem('CIRAS Emitidos', 'sp_ciras_emitidos'),
-      LayerItem('Población Afroperuana', 'sp_pob_afroperuana'),
+      LayerItem('BIP UBIGEO', 'sp_bip_ubigeo'),
     ]),
-
-    LayerGroup('Zonificación', [
-      LayerItem('Zonificación ACP', 'sp_zonificacion_acp'),
-      LayerItem('Zonificación ACR', 'sp_zonificacion_acr'),
-      LayerItem('Zonificación ANP', 'sp_zonificacion_anp'),
+    LayerGroup('Ordenamiento Forstal', [
+      LayerItem(
+        'Bosque Local con Titulo Habilitante',
+        'sp_bosque_local_titulo_habilitante',
+      ),
+      LayerItem(
+        'Bosques de Producción Permanente',
+        'sp_bosques_produccion_permanente',
+      ),
+      LayerItem('Bosques Protectores', 'sp_bosques_protectores'),
+      LayerItem('Cesiones de Uso', 'sp_cesiones_uso'),
+      LayerItem('Concesiones Forestales', 'sp_concesiones_forestales'),
+      LayerItem('Unidad Aprovechamiento', 'sp_unidad_aprovechamiento'),
+    ]),
+    LayerGroup('Catastro Minero', [
+      LayerItem('Catastro Minero Z17', 'sp_catastro_minero_z17'),
+      LayerItem('Catastro Minero Z18', 'sp_catastro_minero_z18'),
+      LayerItem('Catastro Minero Z19', 'sp_catastro_minero_z19'),
     ]),
   ];
 

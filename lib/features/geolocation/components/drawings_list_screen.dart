@@ -839,6 +839,28 @@ class DrawingsListScreen extends StatelessWidget {
           ),
         ),
         actions: [
+          TextButton.icon(
+            onPressed: () {
+              final text = points.map((point) {
+                final utm =
+                    UTM.fromLatLon(lat: point.latitude, lon: point.longitude);
+                return 'Lat: ${point.latitude.toStringAsFixed(6)}, '
+                    'Lng: ${point.longitude.toStringAsFixed(6)}, '
+                    'UTM: Zona ${utm.zone} '
+                    'E: ${utm.easting.round()} '
+                    'N: ${utm.northing.round()}';
+              }).join('\n');
+
+              Clipboard.setData(ClipboardData(text: text));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Coordenadas copiadas al portapapeles'),
+                ),
+              );
+            },
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Copiar'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cerrar'),

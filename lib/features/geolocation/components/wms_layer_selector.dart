@@ -3,7 +3,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:ingeo_app/models/layer_states.dart';
 import 'package:ingeo_app/models/saved_drawing_layer.dart';
 import 'package:ingeo_app/models/wms_layer.dart';
-
 import 'package:ingeo_app/features/geolocation/components/drawings_list_screen.dart';
 import 'package:ingeo_app/utils/wms_capabilities.dart';
 import 'package:ingeo_app/utils/wms_layer_info.dart';
@@ -14,8 +13,19 @@ class _LayerItem {
   final String layerId;
   final Function(bool)? onToggle;
   final Function()? onDelete;
+  final String? legendUrl;
+  final double? legendWidth;
+  final double? legendHeight;
 
-  _LayerItem(this.title, this.layerId, {this.onToggle, this.onDelete});
+  _LayerItem(
+    this.title,
+    this.layerId, {
+    this.onToggle,
+    this.onDelete,
+    this.legendUrl,
+    this.legendWidth,
+    this.legendHeight,
+  });
 }
 
 class WmsLayerSelector extends StatelessWidget {
@@ -200,48 +210,78 @@ class WmsLayerSelector extends StatelessWidget {
                   ),
                 // Modificar la sección que construye las capas WMS
                 // if (layerStates.keys.any((key) => key.startsWith('wms_layer_')))
+                // Modificar la sección que construye las capas WMS
                 _buildLayerGroup(
                   context,
                   'Capas WMS',
                   wmsLayers.map((layer) {
+                    final uri = Uri.parse(layer.url);
+                    final legendUri = uri.replace(
+                      queryParameters: {
+                        'SERVICE': 'WMS',
+                        'VERSION': '1.3.0',
+                        'REQUEST': 'GetLegendGraphic',
+                        'FORMAT': 'image/png',
+                        'LAYER': layer.layerName,
+                        'RULE': '', // vacío = primera regla
+                        'WIDTH': '20',
+                        'HEIGHT': '20',
+                        'TRANSPARENT': 'true',
+                        'LEGEND_OPTIONS':
+                            'forceLabels:off;fontSize:11;fontName:Arial;fontAntiAliasing:true',
+                      },
+                    );
+
+                    debugPrint(
+                      'WMS layer legend URL: ${legendUri.toString()}',
+                    ); // Debug
+
                     return _LayerItem(
                       layer.name,
                       layer.id,
                       onToggle: (value) => onLayerToggle(layer.id, value),
                       onDelete: () => onLayerDelete(layer.id),
+                      legendUrl: legendUri.toString(),
                     );
                   }).toList(),
                 ),
                 if (customLayerGroups != null)
-                  ...customLayerGroups!.map((group) {
-                    return _buildLayerGroup(
+                  ...customLayerGroups!.map(
+                    (group) => _buildLayerGroup(
                       context,
                       group.title,
                       group.items.map((item) {
-                        return _LayerItem(item.title, item.layerId);
+                        final baseUrl =
+                            'https://geoserver140.ideasg.org/geoserver/ingeo/wms';
+
+                        final legendUri = Uri.parse(baseUrl).replace(
+                          queryParameters: {
+                            'SERVICE': 'WMS',
+                            'VERSION': '1.3.0',
+                            'REQUEST': 'GetLegendGraphic',
+                            'FORMAT': 'image/png',
+                            'LAYER': 'ingeo:${item.layerId}',
+                            'RULE': '', // vacío = primera regla
+                            'WIDTH': '20',
+                            'HEIGHT': '20',
+                            'TRANSPARENT': 'true',
+                            'LEGEND_OPTIONS':
+                                'forceLabels:on;fontSize:11;fontName:Arial;fontAntiAliasing:true',
+                          },
+                        );
+
+                        debugPrint(
+                          'Custom layer legend URL: ${legendUri.toString()}',
+                        ); // Debug
+
+                        return _LayerItem(
+                          item.title,
+                          item.layerId,
+                          legendUrl: legendUri.toString(),
+                        );
                       }).toList(),
-                    );
-                  }),
-                // _buildLayerGroup(context, 'Grilla', [
-                //   _LayerItem('UTM Peru', 'sp_grilla_utm_peru'),
-                // ]),
-                // _buildLayerGroup(context, 'Comunidades', [
-                //   _LayerItem(
-                //       'Comunidades Campesinas', 'sp_comunidades_campesinas'),
-                //   _LayerItem('Comunidades Nativas', 'sp_comunidades_nativas'),
-                // ]),
-                // _buildLayerGroup(context, 'División Política', [
-                //   _LayerItem('Departamentos', 'sp_departamentos'),
-                //   _LayerItem('Provincias', 'sp_provincias'),
-                //   _LayerItem('Distritos', 'sp_distritos'),
-                // ]),
-                // _buildLayerGroup(context, 'Sub-cuencas', [
-                //   _LayerItem('Cuencas', 'sp_cuencas'),
-                //   _LayerItem('Subcuencas', 'sp_subcuencas'),
-                // ]),
-                // _buildLayerGroup(context, 'Lagunas', [
-                //   _LayerItem('Lagunas', 'sp_lagunas'),
-                // ]),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -332,10 +372,13 @@ class WmsLayerSelector extends StatelessWidget {
       }
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        initiallyExpanded: false,
+        title: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -406,35 +449,36 @@ class WmsLayerSelector extends StatelessWidget {
             ],
           ),
         ),
-        // Contenedor estilizado para los ítems del grupo
-        if (items.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-              border: Border.all(color: Colors.grey.shade200),
+        children: [
+          if (items.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                children: items.map((item) => _buildLayerItem(item)).toList(),
+              ),
             ),
-            child: Column(
-              children: items
-                  .map((item) => _buildLayerItem(item.title, item.layerId))
-                  .toList(),
-            ),
-          ),
-        const SizedBox(height: 8),
-      ],
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 
-  Widget _buildLayerItem(String title, String layerId) {
+  Widget _buildLayerItem(_LayerItem item) {
+    final title = item.title;
+    final layerId = item.layerId;
     final isDrawingLayer = layerId.startsWith('saved_layer_');
     final isTrackLayer = layerId.startsWith('saved_track_');
     final isExternalLayer = layerId.startsWith('external_layer_');
@@ -448,57 +492,85 @@ class WmsLayerSelector extends StatelessWidget {
         onTap: () => onLayerToggle(layerId, !(layerStates[layerId] ?? false)),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: Checkbox(
-                  value: layerStates[layerId] ?? false,
-                  onChanged: (value) => onLayerToggle(layerId, value ?? false),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+              Row(
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: layerStates[layerId] ?? false,
+                      onChanged: (value) =>
+                          onLayerToggle(layerId, value ?? false),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                   ),
-                ),
-              ),
-              if (isDrawingLayer ||
-                  isTrackLayer ||
-                  isExternalLayer ||
-                  isIntersectionLayer) ...[
-                IconButton(
-                  icon: const Icon(
-                    Icons.center_focus_strong,
-                    size: 20,
-                    color: Colors.blue,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
-                  onPressed: () => onLayerFocus(layerId),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  visualDensity: VisualDensity.compact,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                  onPressed: () => onLayerDelete(layerId),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-              if (isWmsLayer)
-                IconButton(
-                  icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                  onPressed: () => onLayerDelete(layerId),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  visualDensity: VisualDensity.compact,
+                  if (isDrawingLayer ||
+                      isTrackLayer ||
+                      isExternalLayer ||
+                      isIntersectionLayer) ...[
+                    IconButton(
+                      icon: const Icon(
+                        Icons.center_focus_strong,
+                        size: 20,
+                        color: Colors.blue,
+                      ),
+                      onPressed: () => onLayerFocus(layerId),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete,
+                        size: 20,
+                        color: Colors.red,
+                      ),
+                      onPressed: () => onLayerDelete(layerId),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                  if (isWmsLayer)
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete,
+                        size: 20,
+                        color: Colors.red,
+                      ),
+                      onPressed: () => onLayerDelete(layerId),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                ],
+              ),
+              if (item.legendUrl != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 40, top: 4, bottom: 4),
+                  child: Image.network(
+                    item.legendUrl!,
+                    width: item.legendWidth,
+                    height: item.legendHeight,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint('Image load error: $error');
+                      return const SizedBox.shrink();
+                    },
+                  ),
                 ),
             ],
           ),

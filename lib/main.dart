@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ingeo_app/core/config/app_config.dart';
 
 import 'dart:io';
 import 'package:ingeo_app/core/config/http_overrides.dart';
@@ -10,6 +11,7 @@ import 'dart:async';
 void main() async {
   HttpOverrides.global = BadCertificateHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
+  await AppConfig.initialize();
   runApp(const MyApp());
 }
 
