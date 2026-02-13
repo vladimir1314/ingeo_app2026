@@ -6,8 +6,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive.dart';
 
 Future<File> exportLayersByFolderToKMLorKMZ(
-    Map<String, List<SavedDrawingLayer>> layersByFolder, String format,
-    [String? fileName]) async {
+  Map<String, List<SavedDrawingLayer>> layersByFolder,
+  String format, [
+  String? fileName,
+]) async {
   final buffer = StringBuffer();
   buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
   buffer.writeln('<kml xmlns="http://www.opengis.net/kml/2.2">');
@@ -21,9 +23,9 @@ Future<File> exportLayersByFolderToKMLorKMZ(
   for (final folderEntry in layersByFolder.entries) {
     final folderName = folderEntry.key;
     final layers = folderEntry.value;
-    
+
     if (layers.isEmpty) continue;
-    
+
     buffer.writeln('<Folder><name>$folderName</name>');
 
     for (final layer in layers) {
@@ -37,11 +39,9 @@ Future<File> exportLayersByFolderToKMLorKMZ(
           for (final photo in point.photos) {
             final photoName = 'files/photo_${photoCounter++}.jpg';
             final photoBytes = await photo.readAsBytes();
-            archive.addFile(ArchiveFile(
-              photoName,
-              photoBytes.length,
-              photoBytes,
-            ));
+            archive.addFile(
+              ArchiveFile(photoName, photoBytes.length, photoBytes),
+            );
             photoRefs.add(photoName);
           }
         }
@@ -51,9 +51,26 @@ Future<File> exportLayersByFolderToKMLorKMZ(
   <ExtendedData>
     <Data name="locality"><value>${point.locality}</value></Data>
     <Data name="manualCoordinates"><value>${point.manualCoordinates}</value></Data>
-    <Data name="observation"><value>${point.observation}</value></Data>
-  </ExtendedData>
-  <Point><coordinates>${point.marker.point.longitude},${point.marker.point.latitude},0</coordinates></Point>''');
+    <Data name="observation"><value>${point.observation}</value></Data>''');
+
+        // Add dynamic attributes
+        if (point.attributes.isNotEmpty) {
+          point.attributes.forEach((key, value) {
+            final cleanValue = value
+                .toString()
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;');
+            buffer.writeln(
+              '    <Data name="$key"><value>$cleanValue</value></Data>',
+            );
+          });
+        }
+
+        buffer.writeln(
+          '''  </ExtendedData>
+  <Point><coordinates>${point.marker.point.longitude},${point.marker.point.latitude},0</coordinates></Point>''',
+        );
 
         // Add photo references if any
         if (photoRefs.isNotEmpty) {
@@ -67,51 +84,25 @@ Future<File> exportLayersByFolderToKMLorKMZ(
         buffer.writeln('</Placemark>');
       }
 
-      // Pre-process line photos
-      final linePhotoRefs = <String>[];
-      if (layer.attributes != null &&
-          layer.attributes!.containsKey('photos_line')) {
-        final paths = layer.attributes!['photos_line'];
-        if (paths is List) {
-          for (final path in paths) {
-            final file = File(path.toString());
+      // Pre-process polygon photos
+      // Note: We process photos inside the loop now
+
+      for (final line in layer.lines) {
+        final linePhotoRefs = <String>[];
+        if (line.photos.isNotEmpty) {
+          for (final path in line.photos) {
+            final file = File(path);
             if (await file.exists()) {
               final photoName = 'files/photo_${photoCounter++}.jpg';
               final photoBytes = await file.readAsBytes();
-              archive.addFile(ArchiveFile(
-                photoName,
-                photoBytes.length,
-                photoBytes,
-              ));
+              archive.addFile(
+                ArchiveFile(photoName, photoBytes.length, photoBytes),
+              );
               linePhotoRefs.add(photoName);
             }
           }
         }
-      }
 
-      // Pre-process polygon photos
-      final polygonPhotoRefs = <String>[];
-      if (layer.attributes != null &&
-          layer.attributes!.containsKey('photos_polygon')) {
-        final paths = layer.attributes!['photos_polygon'];
-        if (paths is List) {
-          for (final path in paths) {
-            final file = File(path.toString());
-            if (await file.exists()) {
-              final photoName = 'files/photo_${photoCounter++}.jpg';
-              final photoBytes = await file.readAsBytes();
-              archive.addFile(ArchiveFile(
-                photoName,
-                photoBytes.length,
-                photoBytes,
-              ));
-              polygonPhotoRefs.add(photoName);
-            }
-          }
-        }
-      }
-
-      for (final line in layer.lines) {
         final coords = line.polyline.points
             .map((p) => '${p.longitude},${p.latitude},0')
             .join(' ');
@@ -120,8 +111,23 @@ Future<File> exportLayersByFolderToKMLorKMZ(
   <ExtendedData>
     <Data name="locality"><value>${line.locality}</value></Data>
     <Data name="manualCoordinates"><value>${line.manualCoordinates}</value></Data>
-    <Data name="observation"><value>${line.observation}</value></Data>
-  </ExtendedData>
+    <Data name="observation"><value>${line.observation}</value></Data>''');
+
+        // Add dynamic attributes
+        if (line.attributes.isNotEmpty) {
+          line.attributes.forEach((key, value) {
+            final cleanValue = value
+                .toString()
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;');
+            buffer.writeln(
+              '    <Data name="$key"><value>$cleanValue</value></Data>',
+            );
+          });
+        }
+
+        buffer.writeln('''  </ExtendedData>
   <LineString>
     <coordinates>$coords</coordinates>
   </LineString>''');
@@ -139,6 +145,21 @@ Future<File> exportLayersByFolderToKMLorKMZ(
       }
 
       for (final polygon in layer.polygons) {
+        final polygonPhotoRefs = <String>[];
+        if (polygon.photos.isNotEmpty) {
+          for (final path in polygon.photos) {
+            final file = File(path);
+            if (await file.exists()) {
+              final photoName = 'files/photo_${photoCounter++}.jpg';
+              final photoBytes = await file.readAsBytes();
+              archive.addFile(
+                ArchiveFile(photoName, photoBytes.length, photoBytes),
+              );
+              polygonPhotoRefs.add(photoName);
+            }
+          }
+        }
+
         final coords = [
           ...polygon.polygon.points,
           polygon.polygon.points.first,
@@ -148,8 +169,23 @@ Future<File> exportLayersByFolderToKMLorKMZ(
   <ExtendedData>
     <Data name="locality"><value>${polygon.locality}</value></Data>
     <Data name="manualCoordinates"><value>${polygon.manualCoordinates}</value></Data>
-    <Data name="observation"><value>${polygon.observation}</value></Data>
-  </ExtendedData>
+    <Data name="observation"><value>${polygon.observation}</value></Data>''');
+
+        // Add dynamic attributes
+        if (polygon.attributes.isNotEmpty) {
+          polygon.attributes.forEach((key, value) {
+            final cleanValue = value
+                .toString()
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;');
+            buffer.writeln(
+              '    <Data name="$key"><value>$cleanValue</value></Data>',
+            );
+          });
+        }
+
+        buffer.writeln('''  </ExtendedData>
   <Polygon>
     <outerBoundaryIs>
       <LinearRing>
@@ -172,7 +208,7 @@ Future<File> exportLayersByFolderToKMLorKMZ(
 
       buffer.writeln('</Folder>');
     }
-    
+
     buffer.writeln('</Folder>');
   }
 
@@ -182,8 +218,9 @@ Future<File> exportLayersByFolderToKMLorKMZ(
   final directory = await getTemporaryDirectory();
   final timestamp = DateTime.now().millisecondsSinceEpoch;
   final kmlContent = buffer.toString();
-  final baseFileName =
-      fileName?.isNotEmpty == true ? fileName : 'export_by_folders_$timestamp';
+  final baseFileName = fileName?.isNotEmpty == true
+      ? fileName
+      : 'export_by_folders_$timestamp';
 
   late File file;
 
@@ -193,7 +230,8 @@ Future<File> exportLayersByFolderToKMLorKMZ(
   } else {
     // Add the KML file to the archive
     archive.addFile(
-        ArchiveFile('doc.kml', kmlContent.length, utf8.encode(kmlContent)));
+      ArchiveFile('doc.kml', kmlContent.length, utf8.encode(kmlContent)),
+    );
     final kmzData = ZipEncoder().encode(archive);
     file = File('${directory.path}/$baseFileName.kmz');
     await file.writeAsBytes(kmzData!);

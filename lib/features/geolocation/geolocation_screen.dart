@@ -438,9 +438,13 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
         _showRadiusInput();
       });
     }
-    if (layerStates.entries.any(
-      (entry) => entry.value && entry.key.startsWith('sp_'),
-    )) {
+    // Check if any WMS layer (predefined or custom) is active
+    if (layerStates.entries.any((entry) {
+      if (!entry.value) return false;
+      if (entry.key.startsWith('sp_')) return true;
+      if (wmsLayers.any((l) => l.id == entry.key)) return true;
+      return false;
+    })) {
       WmsFeatureInfo.getFeatureInfo(
         context: context,
         mapController: mapController,
@@ -448,6 +452,7 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
         tapXY: localOffset,
         viewportSize: box.size,
         point: point,
+        customWmsLayers: wmsLayers,
       );
     }
   }
