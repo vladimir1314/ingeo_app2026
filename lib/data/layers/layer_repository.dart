@@ -53,6 +53,13 @@ class LayerRepository {
       LayerItem('Declarados', 'sp_sigda_declarados'),
       LayerItem('Delimitados', 'sp_sigda_delimitados'),
       LayerItem('Qhapaq Ñan', 'sp_sigda_qhapaq_nan'),
+      LayerItem('Población Afroperuana', 'sp_pob_afroperuana'),
+      LayerItem('CIRAS Emitidos', 'sp_ciras_emitidos'),
+      LayerItem(
+        'Localidades Pertenecientes a Pueblos Indígenas',
+        'sp_localidad_pertenecientes_pueblos_indigenas',
+      ),
+      LayerItem('BIP UBIGEO', 'sp_bip_ubigeo'),
     ]),
 
     LayerGroup('Peligros Geológicos', [
@@ -68,16 +75,7 @@ class LayerRepository {
       ),
     ]),
 
-    LayerGroup('Restos Arqueológicos', [
-      LayerItem('Población Afroperuana', 'sp_pob_afroperuana'),
-      LayerItem('CIRAS Emitidos', 'sp_ciras_emitidos'),
-      LayerItem(
-        'Localidades Pertenecientes a Pueblos Indígenas',
-        'sp_localidad_pertenecientes_pueblos_indigenas',
-      ),
-      LayerItem('BIP UBIGEO', 'sp_bip_ubigeo'),
-    ]),
-    LayerGroup('Ordenamiento Forstal', [
+    LayerGroup('Ordenamiento Forestal', [
       LayerItem(
         'Bosque Local con Titulo Habilitante',
         'sp_bosque_local_titulo_habilitante',

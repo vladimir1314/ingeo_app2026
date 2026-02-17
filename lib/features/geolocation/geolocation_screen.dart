@@ -1060,7 +1060,6 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
   void toggleLayer(String layerId, bool value) {
     setState(() {
       layerStates[layerId] = value;
-      // Actualizar el estado en el modelo WmsLayer si corresponde
       if (layerId.startsWith('wms_layer_')) {
         final index = wmsLayers.indexWhere((layer) => layer.id == layerId);
         if (index >= 0) {
@@ -1073,10 +1072,14 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
             isVisible: value,
           );
           wmsLayers[index] = updatedLayer;
-          saveWmsLayers(); // Guardar el cambio de estado
+          saveWmsLayers();
         }
       }
     });
+
+    if (layerId.startsWith('external_layer_')) {
+      saveLayerStates();
+    }
   }
 
   List<Widget> _buildWmsLayers() {
@@ -1151,6 +1154,14 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
     await prefs.setString('saved_layers', jsonEncode(layersJson));
   }
 
+  Future<void> saveLayerStates() async {
+    final prefs = await SharedPreferences.getInstance();
+    final externalStates = Map.fromEntries(
+      layerStates.entries.where((e) => e.key.startsWith('external_layer_')),
+    );
+    await prefs.setString('geolocation_layer_states', jsonEncode(externalStates));
+  }
+
   Future<void> loadLayers() async {
     final prefs = await SharedPreferences.getInstance();
     final layersString = prefs.getString('saved_layers');
@@ -1160,19 +1171,29 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
         savedLayers = layersJson
             .map((json) => SavedDrawingLayer.fromJson(json))
             .toList();
-        // Initialize states for loaded layers
         for (var layer in savedLayers) {
           if (layer.id.startsWith('external_layer_')) {
-            layerStates[layer.id] = false; // External layers start deactivated
-          } else if (layer.id.startsWith('wms_layer_')) {
-            // Siempre desactiva las capas WMS al iniciar
-            layerStates[layer.id] = false;
-          } else {
             layerStates[layer.id] =
-                layerStates[layer.id] ?? true; // Other layers default to active
+                layerStates[layer.id] ?? false; // default para nuevas externas
+          } else if (layer.id.startsWith('wms_layer_')) {
+            layerStates[layer.id] = false; // WMS siempre desactivadas al inicio
+          } else {
+            layerStates[layer.id] = layerStates[layer.id] ?? true;
           }
         }
       });
+
+      final statesString = prefs.getString('geolocation_layer_states');
+      if (statesString != null) {
+        final Map<String, dynamic> jsonMap = jsonDecode(statesString);
+        setState(() {
+          jsonMap.forEach((k, v) {
+            if (k.startsWith('external_layer_')) {
+              layerStates[k] = v == true;
+            }
+          });
+        });
+      }
     }
   }
 
@@ -1284,6 +1305,8 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
     List<SavedDrawingLayer> savedLayers,
     Function(String, bool) onLayerToggle,
   ) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
@@ -1313,7 +1336,7 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
                             .length;
 
                         if (totalLayers == 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          scaffoldMessenger.showSnackBar(
                             const SnackBar(
                               content: Text('No hay capas seleccionadas'),
                               behavior: SnackBarBehavior.floating,
@@ -1337,7 +1360,8 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
                             XFile(file.path),
                           ], text: 'Exportación $format');
 
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          if (!mounted) return;
+                          scaffoldMessenger.showSnackBar(
                             SnackBar(
                               content: Text(
                                 'Archivo $format exportado correctamente',
@@ -1351,7 +1375,8 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
                             ),
                           );
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          if (!mounted) return;
+                          scaffoldMessenger.showSnackBar(
                             SnackBar(
                               content: Text('Error al exportar: $e'),
                               behavior: SnackBarBehavior.floating,

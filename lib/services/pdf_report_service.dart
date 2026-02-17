@@ -780,9 +780,7 @@ class PdfReportService {
       'sp_peligrosgeologicos': ['PELIGRO_ES'],
       'sp_puntos_geodesicos': ['PELIGRO_ES'],
       'sp_zonas_criticas': ['PELIGRO_ES'],
-      'sp_cartografia_peligros_fotointerpretado': [
-        'Cartografia Peligro Fotointerpretado',
-      ],
+      'sp_cartografia_peligros_fotointerpretado': ['PELIGRO_ES'],
       'sp_zonas_criticas_fen_2023_2024': ['Peligro'],
 
       // Political / Social
@@ -811,7 +809,7 @@ class PdfReportService {
       'sp_bip_ubigeo': ['nombre'],
       'sp_localidad_pertenecientes_pueblos_indigenas': ['nombre'],
       'sp_ciras_emitidos': ['cira'],
-      'sp_pob_afroperuana': ['ubicacion'],
+      'sp_pob_afroperuana': ['pob_afrope'],
       'sp_zonificacion_acp': ['tz_nomb'],
       'sp_zonificacion_acr': ['tz_nomb'],
       'sp_zonificacion_anp': ['tz_nomb'],

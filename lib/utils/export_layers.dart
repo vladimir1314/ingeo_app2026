@@ -5,6 +5,13 @@ import 'package:ingeo_app/models/saved_drawing_layer.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive.dart';
 
+String _xmlEscape(String value) {
+  return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+}
+
 Future<File> exportLayersByFolderToKMLorKMZ(
   Map<String, List<SavedDrawingLayer>> layersByFolder,
   String format, [
@@ -29,7 +36,8 @@ Future<File> exportLayersByFolderToKMLorKMZ(
     buffer.writeln('<Folder><name>$folderName</name>');
 
     for (final layer in layers) {
-      buffer.writeln('<Folder><name>${layer.name}</name>');
+      final layerName = _xmlEscape(layer.name);
+      buffer.writeln('<Folder><name>$layerName</name>');
 
       for (final point in layer.points) {
         final photoRefs = <String>[];
@@ -228,9 +236,10 @@ Future<File> exportLayersByFolderToKMLorKMZ(
     file = File('${directory.path}/$baseFileName.kml');
     await file.writeAsString(kmlContent);
   } else {
-    // Add the KML file to the archive
+    // Add the KML file to the archive (usar longitud real en bytes)
+    final kmlBytes = utf8.encode(kmlContent);
     archive.addFile(
-      ArchiveFile('doc.kml', kmlContent.length, utf8.encode(kmlContent)),
+      ArchiveFile('doc.kml', kmlBytes.length, kmlBytes),
     );
     final kmzData = ZipEncoder().encode(archive);
     file = File('${directory.path}/$baseFileName.kmz');

@@ -43,10 +43,7 @@ class DrawingsListScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Crea algunos dibujos en el mapa para verlos aquí',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[500],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -93,8 +90,12 @@ class DrawingsListScreen extends StatelessWidget {
     // Crear un grupo para cada carpeta, primero 'sin_carpeta' y luego el resto ordenado alfabéticamente
     // Primero agregar "Sin carpeta" si existe
     if (dibujosPorCarpeta.containsKey('sin_carpeta')) {
-      sections.add(_Section(
-          title: 'Sin carpeta', items: dibujosPorCarpeta['sin_carpeta']!));
+      sections.add(
+        _Section(
+          title: 'Sin carpeta',
+          items: dibujosPorCarpeta['sin_carpeta']!,
+        ),
+      );
       dibujosPorCarpeta.remove('sin_carpeta');
     }
 
@@ -112,9 +113,10 @@ class DrawingsListScreen extends StatelessWidget {
     for (var folderId in carpetasOrdenadas) {
       final folderName =
           dibujosPorCarpeta[folderId]!.first.folderPath?.split('/').last ??
-              'Carpeta';
+          'Carpeta';
       sections.add(
-          _Section(title: folderName, items: dibujosPorCarpeta[folderId]!));
+        _Section(title: folderName, items: dibujosPorCarpeta[folderId]!),
+      );
     }
 
     // // Agregar otras capas
@@ -155,16 +157,19 @@ class DrawingsListScreen extends StatelessWidget {
       body: ListView.builder(
         padding: const EdgeInsets.only(bottom: 8),
         itemCount: sections.fold(
-            0,
-            (sum, section) =>
-                sum! + section.items.length + 1), // +1 por el header
+          0,
+          (sum, section) => sum! + section.items.length + 1,
+        ), // +1 por el header
         itemBuilder: (context, index) {
           // Encontrar la sección correspondiente
           var currentIndex = 0;
           for (final section in sections) {
             if (index == currentIndex) {
               return _buildSectionHeader(
-                  context, section.title, section.items.length);
+                context,
+                section.title,
+                section.items.length,
+              );
             }
             currentIndex++;
 
@@ -191,18 +196,14 @@ class DrawingsListScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            _getSectionIcon(title),
-            size: 18,
-            color: Colors.blueGrey[700],
-          ),
+          Icon(_getSectionIcon(title), size: 18, color: Colors.blueGrey[700]),
           const SizedBox(width: 6),
           Text(
             '$title ($count)',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueGrey[700],
-                ),
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey[700],
+            ),
           ),
         ],
       ),
@@ -235,8 +236,10 @@ class DrawingsListScreen extends StatelessWidget {
       elevation: 4,
       shadowColor: Colors.black26,
       child: ExpansionTile(
-        tilePadding:
-            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        tilePadding: const EdgeInsets.symmetric(
+          horizontal: 16.0,
+          vertical: 12.0,
+        ),
         leading: Container(
           width: 40,
           height: 40,
@@ -252,10 +255,7 @@ class DrawingsListScreen extends StatelessWidget {
         ),
         title: Text(
           layer.name.replaceFirst(RegExp(r'saved_(track|layer)_'), ''),
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,8 +279,10 @@ class DrawingsListScreen extends StatelessWidget {
               title: Text('Puntos (${layer.points.length})'),
               children: layer.points.map((labeledMarker) {
                 final point = labeledMarker.marker.point;
-                final utm =
-                    UTM.fromLatLon(lat: point.latitude, lon: point.longitude);
+                final utm = UTM.fromLatLon(
+                  lat: point.latitude,
+                  lon: point.longitude,
+                );
 
                 final latText = 'Lat: ${point.latitude.toStringAsFixed(6)}';
                 final lngText = 'Lng: ${point.longitude.toStringAsFixed(6)}';
@@ -292,9 +294,9 @@ class DrawingsListScreen extends StatelessWidget {
                     bool copied = false;
 
                     void copyToClipboard() async {
-                      await Clipboard.setData(ClipboardData(
-                        text: '$latText\n$lngText\n$utmText',
-                      ));
+                      await Clipboard.setData(
+                        ClipboardData(text: '$latText\n$lngText\n$utmText'),
+                      );
 
                       setState(() => copied = true);
 
@@ -309,25 +311,47 @@ class DrawingsListScreen extends StatelessWidget {
                     return Column(
                       children: [
                         ListTile(
-                          leading:
-                              const Icon(Icons.location_on, color: Colors.red),
+                          leading: const Icon(
+                            Icons.location_on,
+                            color: Colors.red,
+                          ),
                           title: Text(labeledMarker.label),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 4),
                               if (labeledMarker.locality.isNotEmpty)
-                                _buildInfoRow('Localidad:', labeledMarker.locality),
+                                _buildInfoRow(
+                                  'Localidad:',
+                                  labeledMarker.locality,
+                                ),
                               if (labeledMarker.manualCoordinates.isNotEmpty)
-                                _buildInfoRow('Coords:', labeledMarker.manualCoordinates),
-                              if (labeledMarker.observation.isNotEmpty)
-                                _buildInfoRow('Obs:', labeledMarker.observation),
+                                _buildInfoRow(
+                                  'Coords:',
+                                  labeledMarker.manualCoordinates,
+                                ),
+                              if (labeledMarker.observation.isNotEmpty &&
+                                  !labeledMarker.observation
+                                      .toUpperCase()
+                                      .contains('FID'))
+                                _buildInfoRow(
+                                  'Obs:',
+                                  labeledMarker.observation,
+                                ),
                               if (labeledMarker.attributes.isNotEmpty)
                                 _buildAttributesList(labeledMarker.attributes),
-                              if (!layer.name.toLowerCase().contains('dibujo')) ...[
+                              if (!layer.name.toLowerCase().contains(
+                                'dibujo',
+                              )) ...[
                                 const Divider(height: 12),
-                                _buildInfoRow('Lat:', point.latitude.toStringAsFixed(6)),
-                                _buildInfoRow('Lng:', point.longitude.toStringAsFixed(6)),
+                                _buildInfoRow(
+                                  'Lat:',
+                                  point.latitude.toStringAsFixed(6),
+                                ),
+                                _buildInfoRow(
+                                  'Lng:',
+                                  point.longitude.toStringAsFixed(6),
+                                ),
                                 Padding(
                                   padding: const EdgeInsets.only(top: 2),
                                   child: Text(
@@ -339,15 +363,17 @@ class DrawingsListScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                              ]
+                              ],
                             ],
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.center_focus_strong,
-                                    color: Colors.indigo),
+                                icon: const Icon(
+                                  Icons.center_focus_strong,
+                                  color: Colors.indigo,
+                                ),
                                 tooltip: 'Enfocar en el mapa',
                                 onPressed: () {
                                   Navigator.of(context).pop();
@@ -392,7 +418,8 @@ class DrawingsListScreen extends StatelessWidget {
                             _buildInfoRow('Localidad:', line.locality),
                           if (line.manualCoordinates.isNotEmpty)
                             _buildInfoRow('Coords:', line.manualCoordinates),
-                          if (line.observation.isNotEmpty)
+                          if (line.observation.isNotEmpty &&
+                              !line.observation.toUpperCase().contains('FID'))
                             _buildInfoRow('Obs:', line.observation),
                           if (line.attributes.isNotEmpty)
                             _buildAttributesList(line.attributes),
@@ -403,15 +430,20 @@ class DrawingsListScreen extends StatelessWidget {
                             children: [
                               _buildTag('Puntos: ${polyline.points.length}'),
                               _buildTag('Grosor: ${polyline.strokeWidth}'),
-                              _buildTag('Distancia: ${_formatDistance(distance)}',
-                                  color: Colors.blue.shade100,
-                                  textColor: Colors.blue.shade900),
+                              _buildTag(
+                                'Distancia: ${_formatDistance(distance)}',
+                                color: Colors.blue.shade100,
+                                textColor: Colors.blue.shade900,
+                              ),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Text('Color: ', style: TextStyle(fontSize: 12)),
+                              const Text(
+                                'Color: ',
+                                style: TextStyle(fontSize: 12),
+                              ),
                               Container(
                                 width: 20,
                                 height: 20,
@@ -428,8 +460,10 @@ class DrawingsListScreen extends StatelessWidget {
                       ),
                       onTap: () => _showPointsList(context, polyline.points),
                       trailing: IconButton(
-                        icon: const Icon(Icons.center_focus_strong,
-                            color: Colors.indigo),
+                        icon: const Icon(
+                          Icons.center_focus_strong,
+                          color: Colors.indigo,
+                        ),
                         tooltip: 'Enfocar en el mapa',
                         onPressed: () {
                           Navigator.of(context).pop();
@@ -449,7 +483,7 @@ class DrawingsListScreen extends StatelessWidget {
                 final area = _calculatePolygonArea(polygon.polygon.points);
                 final photos = polygon.photos.map((p) => File(p)).toList();
                 if (photos.isEmpty) {
-                   photos.addAll(_getAttributesPhotos(layer, 'photos_polygon'));
+                  photos.addAll(_getAttributesPhotos(layer, 'photos_polygon'));
                 }
 
                 return Column(
@@ -466,7 +500,10 @@ class DrawingsListScreen extends StatelessWidget {
                             _buildInfoRow('Localidad:', polygon.locality),
                           if (polygon.manualCoordinates.isNotEmpty)
                             _buildInfoRow('Coords:', polygon.manualCoordinates),
-                          if (polygon.observation.isNotEmpty)
+                          if (polygon.observation.isNotEmpty &&
+                              !polygon.observation.toUpperCase().contains(
+                                'FID',
+                              ))
                             _buildInfoRow('Obs:', polygon.observation),
                           if (polygon.attributes.isNotEmpty)
                             _buildAttributesList(polygon.attributes),
@@ -475,18 +512,26 @@ class DrawingsListScreen extends StatelessWidget {
                             spacing: 12,
                             runSpacing: 4,
                             children: [
-                              _buildTag('Vértices: ${polygon.polygon.points.length}'),
                               _buildTag(
-                                  'Relleno: ${polygon.polygon.isFilled ? 'Sí' : 'No'}'),
-                              _buildTag('Área: ${_formatArea(area)}',
-                                  color: Colors.green.shade100,
-                                  textColor: Colors.green.shade900),
+                                'Vértices: ${polygon.polygon.points.length}',
+                              ),
+                              _buildTag(
+                                'Relleno: ${polygon.polygon.isFilled ? 'Sí' : 'No'}',
+                              ),
+                              _buildTag(
+                                'Área: ${_formatArea(area)}',
+                                color: Colors.green.shade100,
+                                textColor: Colors.green.shade900,
+                              ),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Text('Color: ', style: TextStyle(fontSize: 12)),
+                              const Text(
+                                'Color: ',
+                                style: TextStyle(fontSize: 12),
+                              ),
                               Container(
                                 width: 20,
                                 height: 20,
@@ -501,14 +546,19 @@ class DrawingsListScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      onTap: () => _showPointsList(context, polygon.polygon.points),
+                      onTap: () =>
+                          _showPointsList(context, polygon.polygon.points),
                       trailing: IconButton(
-                        icon: const Icon(Icons.center_focus_strong,
-                            color: Colors.indigo),
+                        icon: const Icon(
+                          Icons.center_focus_strong,
+                          color: Colors.indigo,
+                        ),
                         tooltip: 'Enfocar en el mapa',
                         onPressed: () {
                           Navigator.of(context).pop();
-                          onLayerFocus(polygon.polygon.points); // ✅ solo el polígono
+                          onLayerFocus(
+                            polygon.polygon.points,
+                          ); // ✅ solo el polígono
                         },
                       ),
                     ),
@@ -560,7 +610,9 @@ class DrawingsListScreen extends StatelessWidget {
             TextSpan(
               text: '$label ',
               style: const TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                fontWeight: FontWeight.bold,
+                color: Colors.blueGrey,
+              ),
             ),
             TextSpan(text: value),
           ],
@@ -648,8 +700,11 @@ class DrawingsListScreen extends StatelessWidget {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.broken_image,
-                                        size: 24, color: Colors.grey[400]),
+                                    Icon(
+                                      Icons.broken_image,
+                                      size: 24,
+                                      color: Colors.grey[400],
+                                    ),
                                     const SizedBox(height: 4),
                                     Text(
                                       'Error',
@@ -669,7 +724,9 @@ class DrawingsListScreen extends StatelessWidget {
                           right: 4,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.black54,
                               borderRadius: BorderRadius.circular(8),
@@ -735,10 +792,7 @@ class DrawingsListScreen extends StatelessWidget {
       badges.add(_buildBadge(Icons.category, Colors.green));
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: badges,
-    );
+    return Row(mainAxisSize: MainAxisSize.min, children: badges);
   }
 
   Widget _buildBadge(IconData icon, Color color) {
@@ -774,11 +828,7 @@ class DrawingsListScreen extends StatelessWidget {
     double totalDistance = 0;
 
     for (int i = 0; i < points.length - 1; i++) {
-      totalDistance += distance.as(
-        LengthUnit.Meter,
-        points[i],
-        points[i + 1],
-      );
+      totalDistance += distance.as(LengthUnit.Meter, points[i], points[i + 1]);
     }
 
     return totalDistance;
@@ -796,11 +846,13 @@ class DrawingsListScreen extends StatelessWidget {
 
     double area = 0;
     for (int i = 0; i < points.length - 1; i++) {
-      area += (points[i].longitude * points[i + 1].latitude) -
+      area +=
+          (points[i].longitude * points[i + 1].latitude) -
           (points[i + 1].longitude * points[i].latitude);
     }
 
-    area += (points.last.longitude * points.first.latitude) -
+    area +=
+        (points.last.longitude * points.first.latitude) -
         (points.first.longitude * points.last.latitude);
 
     // Convertir a metros cuadrados (aproximación)
@@ -822,8 +874,10 @@ class DrawingsListScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: points.map((point) {
-              final utm =
-                  UTM.fromLatLon(lat: point.latitude, lon: point.longitude);
+              final utm = UTM.fromLatLon(
+                lat: point.latitude,
+                lon: point.longitude,
+              );
               return ListTile(
                 dense: true,
                 title: Text(
@@ -841,15 +895,19 @@ class DrawingsListScreen extends StatelessWidget {
         actions: [
           TextButton.icon(
             onPressed: () {
-              final text = points.map((point) {
-                final utm =
-                    UTM.fromLatLon(lat: point.latitude, lon: point.longitude);
-                return 'Lat: ${point.latitude.toStringAsFixed(6)}, '
-                    'Lng: ${point.longitude.toStringAsFixed(6)}, '
-                    'UTM: Zona ${utm.zone} '
-                    'E: ${utm.easting.round()} '
-                    'N: ${utm.northing.round()}';
-              }).join('\n');
+              final text = points
+                  .map((point) {
+                    final utm = UTM.fromLatLon(
+                      lat: point.latitude,
+                      lon: point.longitude,
+                    );
+                    return 'Lat: ${point.latitude.toStringAsFixed(6)}, '
+                        'Lng: ${point.longitude.toStringAsFixed(6)}, '
+                        'UTM: Zona ${utm.zone} '
+                        'E: ${utm.easting.round()} '
+                        'N: ${utm.northing.round()}';
+                  })
+                  .join('\n');
 
               Clipboard.setData(ClipboardData(text: text));
               ScaffoldMessenger.of(context).showSnackBar(
@@ -876,8 +934,9 @@ class DrawingsListScreen extends StatelessWidget {
       builder: (context) {
         return Dialog(
           insetPadding: const EdgeInsets.all(16),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Stack(
             children: [
               InteractiveViewer(
@@ -893,8 +952,11 @@ class DrawingsListScreen extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.broken_image,
-                              size: 64, color: Colors.grey[400]),
+                          Icon(
+                            Icons.broken_image,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'No se pudo cargar la imagen',
@@ -942,8 +1004,10 @@ class DrawingsListScreen extends StatelessWidget {
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   child: Text(
                     'Foto',
                     style: TextStyle(
@@ -969,12 +1033,7 @@ class DrawingsListScreen extends StatelessWidget {
           insetPadding: const EdgeInsets.all(16),
           child: Stack(
             children: [
-              InteractiveViewer(
-                child: Image.file(
-                  file,
-                  fit: BoxFit.contain,
-                ),
-              ),
+              InteractiveViewer(child: Image.file(file, fit: BoxFit.contain)),
               Positioned(
                 right: 8,
                 top: 8,
@@ -982,7 +1041,7 @@ class DrawingsListScreen extends StatelessWidget {
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
-              )
+              ),
             ],
           ),
         );

@@ -187,6 +187,14 @@ class _OverlapScreenState extends State<OverlapScreen> {
     await prefs.setString('saved_layers', jsonEncode(layersJson));
   }
 
+  Future<void> saveLayerStates() async {
+    final prefs = await SharedPreferences.getInstance();
+    final externalStates = Map.fromEntries(
+      layerStates.entries.where((e) => e.key.startsWith('external_layer_')),
+    );
+    await prefs.setString('overlap_layer_states', jsonEncode(externalStates));
+  }
+
   Future<void> loadLayers() async {
     final prefs = await SharedPreferences.getInstance();
     final layersString = prefs.getString('saved_layers');
@@ -197,9 +205,25 @@ class _OverlapScreenState extends State<OverlapScreen> {
             .map((json) => SavedDrawingLayer.fromJson(json))
             .toList();
         for (var layer in savedLayers) {
-          layerStates[layer.id] = layerStates[layer.id] ?? true;
+          if (layer.id.startsWith('external_layer_')) {
+            layerStates[layer.id] = layerStates[layer.id] ?? true; // default
+          } else {
+            layerStates[layer.id] = layerStates[layer.id] ?? true;
+          }
         }
       });
+
+      final statesString = prefs.getString('overlap_layer_states');
+      if (statesString != null) {
+        final Map<String, dynamic> jsonMap = jsonDecode(statesString);
+        setState(() {
+          jsonMap.forEach((k, v) {
+            if (k.startsWith('external_layer_')) {
+              layerStates[k] = v == true;
+            }
+          });
+        });
+      }
     }
   }
 
@@ -339,6 +363,7 @@ class _OverlapScreenState extends State<OverlapScreen> {
     setState(() {
       layerStates[layerId] = value;
     });
+    saveLayerStates();
   }
 
   void handleLayerDelete(String layerId) {
@@ -347,6 +372,7 @@ class _OverlapScreenState extends State<OverlapScreen> {
       savedLayers.removeWhere((layer) => layer.id == layerId);
     });
     saveLayers();
+    saveLayerStates();
   }
 
   void handleLayerFocus(String layerId) {
@@ -396,6 +422,7 @@ class _OverlapScreenState extends State<OverlapScreen> {
       layerStates[importedLayer.id] = true;
     });
     saveLayers();
+    saveLayerStates();
 
     // Centrar el mapa
     if (importedLayer.points.isNotEmpty) {

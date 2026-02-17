@@ -340,14 +340,12 @@ class WmsLayerSelector extends StatelessWidget {
     String title,
     List<_LayerItem> items,
   ) {
-    // Logic for "Dibujos" checkbox
+    // Logic for "Dibujos" checkbox (afecta solo los items del grupo)
     bool? groupCheckboxValue;
     VoidCallback? onGroupToggle;
 
-    if (title == 'Dibujos') {
-      final drawingKeys = layerStates.keys
-          .where((k) => k.startsWith('saved_layer_'))
-          .toList();
+    if (title.startsWith('Dibujos')) {
+      final drawingKeys = items.map((i) => i.layerId).toList();
 
       if (drawingKeys.isNotEmpty) {
         final allChecked = drawingKeys.every((k) => layerStates[k] == true);
@@ -385,7 +383,7 @@ class WmsLayerSelector extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  if (title == 'Dibujos' && onGroupToggle != null)
+                  if (title.startsWith('Dibujos') && onGroupToggle != null)
                     Padding(
                       padding: const EdgeInsets.only(right: 8.0),
                       child: SizedBox(
