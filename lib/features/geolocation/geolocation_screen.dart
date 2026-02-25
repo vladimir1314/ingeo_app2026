@@ -1058,6 +1058,7 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
   }
 
   void toggleLayer(String layerId, bool value) {
+    print("toggleLayer: $layerId, $value");
     setState(() {
       layerStates[layerId] = value;
       if (layerId.startsWith('wms_layer_')) {
@@ -1159,7 +1160,10 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
     final externalStates = Map.fromEntries(
       layerStates.entries.where((e) => e.key.startsWith('external_layer_')),
     );
-    await prefs.setString('geolocation_layer_states', jsonEncode(externalStates));
+    await prefs.setString(
+      'geolocation_layer_states',
+      jsonEncode(externalStates),
+    );
   }
 
   Future<void> loadLayers() async {
