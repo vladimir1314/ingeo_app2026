@@ -15,6 +15,8 @@ class AppConfig {
 
   static String get geoserverUrl =>
       dotenv.env['GEOSERVER_URL'] ?? 'http://localhost:8080/geoserver';
+  static String get geoserverWmsUrl => '$geoserverUrl/$workspace/wms';
+  static String get geoserverWmsUrlWithQuery => '$geoserverWmsUrl?';
   static String get geoserverUser => dotenv.env['GEOSERVER_USER'] ?? '';
   static String get geoserverPass => dotenv.env['GEOSERVER_PASS'] ?? '';
   static String get workspace => dotenv.env['WORKSPACE'] ?? 'ingeo';

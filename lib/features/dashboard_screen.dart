@@ -1,12 +1,15 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:ingeo_app/core/access_control/access_control_service.dart';
 import 'package:ingeo_app/core/access_control/app_features.dart';
+import 'package:ingeo_app/core/config/app_config.dart';
 import 'package:ingeo_app/features/geolocation/geolocation_screen.dart';
 import 'package:ingeo_app/features/overlap/overlap_screen.dart';
 import 'package:ingeo_app/features/auth/login_screen.dart';
 import 'package:ingeo_app/utils/pending_file_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,15 +19,81 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  static const _manualUrl =
+      'https://drive.google.com/drive/folders/1KzrH62e4E8SxebViL7VInA0_DmqJcHR1?usp=drive_link';
+
+  final String _geoserverWmsBaseUrl = AppConfig.geoserverWmsUrl;
+
+  bool? _geoserverOk;
+  bool _geoserverChecking = false;
+  String? _geoserverDetails;
+
+  Future<void> _openManual() async {
+    final uri = Uri.parse(_manualUrl);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir el manual')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     // Verificar estado de autenticación al iniciar
     AccessControlService().checkAuthStatus();
+    _checkGeoserverWms();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPendingFile();
       PendingFileHandler().pendingFilePath.addListener(_checkPendingFile);
     });
+    _checkGeoserverWms();
+  }
+
+  Future<void> _checkGeoserverWms() async {
+    if (_geoserverChecking) return;
+    setState(() {
+      _geoserverChecking = true;
+      _geoserverDetails = null;
+    });
+
+    try {
+      final uri = Uri.parse(_geoserverWmsBaseUrl).replace(
+        queryParameters: const {
+          'SERVICE': 'WMS',
+          'REQUEST': 'GetCapabilities',
+          'VERSION': '1.1.1',
+        },
+      );
+
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+
+      final body = response.body;
+      final ok =
+          response.statusCode == 200 &&
+          (body.contains('WMS_Capabilities') ||
+              body.contains('WMT_MS_Capabilities'));
+
+      if (!mounted) return;
+      setState(() {
+        _geoserverOk = ok;
+        _geoserverDetails = ok
+            ? ''
+            : 'Error ${response.statusCode}: ${body.isNotEmpty ? body.substring(0, body.length > 120 ? 120 : body.length) : 'sin respuesta'}';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _geoserverOk = false;
+        _geoserverDetails = e.toString();
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _geoserverChecking = false;
+      });
+    }
   }
 
   @override
@@ -167,6 +236,129 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Material(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  onTap: _openManual,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.menu_book, color: Colors.blueGrey[800]),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Manual de la app',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.open_in_new,
+                          size: 18,
+                          color: Colors.blueGrey[700],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Material(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _geoserverOk == true
+                            ? Icons.cloud_done
+                            : _geoserverOk == false
+                            ? Icons.cloud_off
+                            : Icons.cloud_queue,
+                        color: _geoserverOk == true
+                            ? Colors.green[800]
+                            : _geoserverOk == false
+                            ? Colors.red[800]
+                            : Colors.blueGrey[600],
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'GeoServer WMS',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.blueGrey[900],
+                              ),
+                            ),
+                            Text(
+                              _geoserverChecking
+                                  ? 'Verificando...'
+                                  : _geoserverOk == true
+                                  ? 'Servicio disponible'
+                                  : _geoserverOk == false
+                                  ? 'Servicio con error'
+                                  : 'Sin verificar',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blueGrey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _geoserverChecking
+                            ? null
+                            : _checkGeoserverWms,
+                        icon: const Icon(Icons.refresh, size: 18),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Verificar',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (_geoserverDetails != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _geoserverDetails!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, color: Colors.blueGrey[700]),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
             Expanded(
               child: GridView.builder(
                 padding: const EdgeInsets.all(16.0),

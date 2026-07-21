@@ -31,6 +31,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ingeo_app/core/config/app_config.dart';
 import 'package:ingeo_app/features/geolocation/models/label_input_result.dart';
 import 'package:ingeo_app/features/geolocation/components/search_bar.dart';
 import 'package:utm/utm.dart';
@@ -511,6 +512,47 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
     return perimeter; // en metros
   }
 
+  static const _bgLocationDisclosureAcceptedKey =
+      'bg_location_disclosure_accepted';
+
+  Future<bool> _ensureBackgroundLocationDisclosureAccepted() async {
+    final prefs = await SharedPreferences.getInstance();
+    final alreadyAccepted =
+        prefs.getBool(_bgLocationDisclosureAcceptedKey) ?? false;
+    if (alreadyAccepted) return true;
+
+    final accepted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Aviso destacado'),
+        content: const Text(
+          'Para usar el tracking, la app necesita acceder a tu ubicación incluso cuando está en segundo plano.'
+          'Se usará únicamente mientras el tracking esté activo para registrar tu recorrido. Puedes detenerlo en cualquier momento desde la pantalla.'
+          'Los puntos registrados se almacenan en el dispositivo y se incluyen en los reportes que tú decidas generar o compartir.',
+          textAlign: TextAlign.justify,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('No acepto'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Acepto'),
+          ),
+        ],
+      ),
+    );
+
+    final ok = accepted == true;
+    if (ok) {
+      await prefs.setBool(_bgLocationDisclosureAcceptedKey, true);
+    }
+    return ok;
+  }
+
   void toggleTracking() async {
     if (isLoadingLocation) {
       final result = await showDialog<bool>(
@@ -548,6 +590,9 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
       }
     }
     if (!isTracking) {
+      final disclosureOk = await _ensureBackgroundLocationDisclosureAccepted();
+      if (!disclosureOk) return;
+
       LocationPermission permission = await Geolocator.checkPermission();
 
       if (permission == LocationPermission.denied) {
@@ -995,7 +1040,7 @@ class _GeolocationScreenState extends State<GeolocationScreen> {
   final List<LayerGroup> layerGroups = LayerRepository.all;
 
   List<Widget> getWmsTileLayers() {
-    const baseUrl = 'http://84.247.176.139:8080/geoserver/ingeo/wms?';
+    final baseUrl = AppConfig.geoserverWmsUrlWithQuery;
 
     return layerStates.entries
         .where((entry) => entry.value && entry.key.startsWith('sp_'))

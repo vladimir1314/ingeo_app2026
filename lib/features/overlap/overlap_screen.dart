@@ -20,6 +20,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:utm/utm.dart';
 import 'package:ingeo_app/core/services/elevation_service.dart';
+import 'package:ingeo_app/core/config/app_config.dart';
 import 'package:ingeo_app/data/layers/layer_repository.dart';
 import 'dart:math' as math;
 
@@ -458,7 +459,7 @@ class _OverlapScreenState extends State<OverlapScreen> {
   }
 
   List<Widget> getWmsTileLayers() {
-    const baseUrl = 'http://84.247.176.139:8080/geoserver/ingeo/wms?';
+    final baseUrl = AppConfig.geoserverWmsUrlWithQuery;
 
     return layerStates.entries
         .where((entry) => entry.value && entry.key.startsWith('sp_'))

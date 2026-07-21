@@ -1,4 +1,4 @@
-package com.example.ingeo_app
+package com.allpacha.ingeo_app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -695,8 +695,14 @@ class PdfReportGenerator {
       'Longitud (m)',
       'Inicio Lat',
       'Inicio Lon',
+      'Inicio UTM Este',
+      'Inicio UTM Norte',
+      'Inicio Zona',
       'Fin Lat',
       'Fin Lon',
+      'Fin UTM Este',
+      'Fin UTM Norte',
+      'Fin Zona',
       'Fecha',
     ]);
 
@@ -708,6 +714,9 @@ class PdfReportGenerator {
       'Perímetro (m)',
       'Centroide Lat',
       'Centroide Lon',
+      'Centroide UTM Este',
+      'Centroide UTM Norte',
+      'Centroide Zona',
       'Fecha',
     ]);
 
@@ -744,14 +753,26 @@ class PdfReportGenerator {
         final start = pts.first;
         final end = pts.last;
 
+        final startUtm = UTM.fromLatLon(
+          lat: start.latitude,
+          lon: start.longitude,
+        );
+        final endUtm = UTM.fromLatLon(lat: end.latitude, lon: end.longitude);
+
         sheetLines.appendRow([
           layer.name,
           line.label,
           length.toStringAsFixed(2),
           start.latitude.toStringAsFixed(6),
           start.longitude.toStringAsFixed(6),
+          startUtm.easting.round(),
+          startUtm.northing.round(),
+          '${startUtm.zoneNumber}${startUtm.zoneLetter}',
           end.latitude.toStringAsFixed(6),
           end.longitude.toStringAsFixed(6),
+          endUtm.easting.round(),
+          endUtm.northing.round(),
+          '${endUtm.zoneNumber}${endUtm.zoneLetter}',
           layer.timestamp.toString().split('.')[0],
         ]);
       }
@@ -763,6 +784,7 @@ class PdfReportGenerator {
         final center = _getPolygonCentroid(polygon.polygon.points);
         final area = _calculatePolygonAreaMeters2(polygon.polygon.points);
         final perimeter = _calculatePolygonPerimeter(polygon.polygon.points);
+        final centerUtm = UTM.fromLatLon(lat: center.latitude, lon: center.longitude);
 
         sheetPolygons.appendRow([
           layer.name,
@@ -771,6 +793,9 @@ class PdfReportGenerator {
           perimeter.toStringAsFixed(2),
           center.latitude.toStringAsFixed(6),
           center.longitude.toStringAsFixed(6),
+          centerUtm.easting.round(),
+          centerUtm.northing.round(),
+          '${centerUtm.zoneNumber}${centerUtm.zoneLetter}',
           layer.timestamp.toString().split('.')[0],
         ]);
       }

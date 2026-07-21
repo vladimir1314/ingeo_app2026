@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:ingeo_app/core/config/app_config.dart';
 import 'package:ingeo_app/models/wms_layer.dart';
 import 'package:xml/xml.dart';
 
@@ -46,8 +47,8 @@ class WmsFeatureInfo {
         bool useAuth = false;
 
         if (entry.key.startsWith('sp_')) {
-          baseUrl = 'http://84.247.176.139:8080/geoserver/ingeo/wms';
-          layerName = 'ingeo:${entry.key}';
+          baseUrl = AppConfig.geoserverWmsUrl;
+          layerName = '${AppConfig.workspace}:${entry.key}';
           displayName = entry.key; // Fallback for internal layers
           useAuth = true;
         } else {
@@ -58,7 +59,7 @@ class WmsFeatureInfo {
           layerName = customLayer.layerName;
           displayName = customLayer.name; // Use friendly name
           // Check if it's the same internal server to use auth
-          if (baseUrl.contains('84.247.176.139')) {
+          if (baseUrl.contains(AppConfig.geoserverUrl)) {
             useAuth = true;
           }
         }
